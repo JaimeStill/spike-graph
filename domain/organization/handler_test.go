@@ -1,0 +1,232 @@
+package organization_test
+
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/standards-lab/blobfs/data/datatest"
+	"github.com/standards-lab/go-web-sdk"
+	"github.com/standards-lab/sqlate/sqltest"
+
+	"github.com/JaimeStill/spike-graph/data"
+	"github.com/JaimeStill/spike-graph/domain/organization"
+)
+
+// module compiles the layer's route group the way the composition root
+// does, over the scripted driver with the given responses; with none
+// scripted, only the handler-local rejection paths can answer.
+func module(t *testing.T, responses ...sqltest.Response) http.Handler {
+	t.Helper()
+	svc, _ := service(t, responses...)
+	r := web.NewRouter()
+	r.Mount(web.NewModule(organization.Routes(svc, web.Limits{DefaultSize: 20, MaxSize: 100}, transfer, slog.New(slog.DiscardHandler))))
+	return r
+}
+
+func send(t *testing.T, h http.Handler, method, path, ifMatch, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	var r *http.Request
+	if body == "" {
+		r = httptest.NewRequest(method, path, nil)
+	} else {
+		r = httptest.NewRequest(method, path, strings.NewReader(body))
+	}
+	if ifMatch != "" {
+		r.Header.Set("If-Match", ifMatch)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	return rec
+}
+
+func problem(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int) map[string]any {
+	t.Helper()
+	if rec.Code != wantStatus {
+		t.Fatalf("status = %d, want %d (body %s)", rec.Code, wantStatus, rec.Body)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != web.ProblemMediaType {
+		t.Errorf("Content-Type = %q, want %q", ct, web.ProblemMediaType)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode problem: %v", err)
+	}
+	return body
+}
+
+func TestRoutes_RejectBeforeAnyOperation(t *testing.T) {
+	cases := map[string]struct {
+		method, path, ifMatch, body string
+		status                      int
+		detail                      string
+	}{
+		"list: malformed page":       {"GET", "/organizations?page=x", "", "", 400, "query page"},
+		"list: oversized page":       {"GET", "/organizations?size=1000", "", "", 400, "query size"},
+		"find: malformed id":         {"GET", "/organizations/not-a-uuid", "", "", 400, "must be a UUID"},
+		"lookup: no path":            {"GET", "/organizations/lookup", "", "", 400, "requires a path"},
+		"logo: malformed id":         {"GET", "/organizations/not-a-uuid/logo", "", "", 400, "must be a UUID"},
+		"create: malformed body":     {"POST", "/organizations", "", "{", 400, "body:"},
+		"create: unknown field":      {"POST", "/organizations", "", `{"codex":"a"}`, 400, "codex"},
+		"create: empty body":         {"POST", "/organizations", "", " ", 400, "empty body"},
+		"create: bad code":           {"POST", "/organizations", "", `{"code":"Bad_Code","name":"X"}`, 400, "code must be"},
+		"create: empty name":         {"POST", "/organizations", "", `{"code":"ok","name":""}`, 400, "name must not be empty"},
+		"create: bad parent":         {"POST", "/organizations", "", `{"parent_id":"nope","code":"ok","name":"X"}`, 400, "parent_id must be a UUID"},
+		"edit: missing If-Match":     {"PUT", "/organizations/" + validID, "", `{"code":"ok","name":"X"}`, 428, "If-Match"},
+		"transfer: missing If-Match": {"POST", "/organizations/" + validID + "/transfer", "", `{"parent_id":null}`, 428, "If-Match"},
+		"delete: missing If-Match":   {"DELETE", "/organizations/" + validID, "", "", 428, "If-Match"},
+		"edit: malformed If-Match":   {"PUT", "/organizations/" + validID, `W/"3"`, `{"code":"ok","name":"X"}`, 400, "If-Match"},
+		"edit: malformed id":         {"PUT", "/organizations/not-a-uuid", `"1"`, `{"code":"ok","name":"X"}`, 400, "must be a UUID"},
+		"edit: missing name":         {"PUT", "/organizations/" + validID, `"1"`, `{"code":"ok"}`, 400, "name must not be empty"},
+		"transfer: bad parent":       {"POST", "/organizations/" + validID + "/transfer", `"1"`, `{"parent_id":"nope"}`, 400, "parent_id must be a UUID"},
+		"transfer: key omitted":      {"POST", "/organizations/" + validID + "/transfer", `"1"`, `{}`, 400, "parent_id is required"},
+		"edit on PATCH is unrouted":  {"PATCH", "/organizations/" + validID, `"1"`, `{"code":"ok","name":"X"}`, 405, ""},
+	}
+	h := module(t)
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			rec := send(t, h, c.method, c.path, c.ifMatch, c.body)
+			if c.detail == "" {
+				if rec.Code != c.status {
+					t.Fatalf("status = %d, want %d", rec.Code, c.status)
+				}
+				return
+			}
+			body := problem(t, rec, c.status)
+			if detail, _ := body["detail"].(string); !strings.Contains(detail, c.detail) {
+				t.Errorf("detail = %q, want it to contain %q", detail, c.detail)
+			}
+		})
+	}
+}
+
+func TestRoutes_OversizedBodyIs413(t *testing.T) {
+	rec := send(t, module(t), "POST", "/organizations", "", `{"name":"`+strings.Repeat("x", 1<<16)+`"}`)
+	problem(t, rec, 413)
+}
+
+func TestRoutes_LibraryErrorsMapThroughTheDataMatcher(t *testing.T) {
+	cases := map[string]struct {
+		responses             []sqltest.Response
+		method, path, ifMatch string
+		status                int
+	}{
+		"unknown filter field is 400": {nil, "GET", "/organizations?nope=1", "", 400},
+		"unknown operator is 400":     {nil, "GET", "/organizations?code[between]=a", "", 400},
+		"absent row is 404": {
+			[]sqltest.Response{{Columns: []string{"id", "parent_id", "code", "name", "version", "created_at", "updated_at", "path"}}},
+			"GET", "/organizations/" + validID, "", 404,
+		},
+		"stale version is 412": {
+			[]sqltest.Response{{Affected: 0}, {Columns: []string{"version"}, Rows: [][]driver.Value{{int64(9)}}}},
+			"DELETE", "/organizations/" + validID, `"1"`, 412,
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			rec := send(t, module(t, c.responses...), c.method, c.path, c.ifMatch, "")
+			problem(t, rec, c.status)
+		})
+	}
+}
+
+func TestCreate_AnswersCreatedWithLocation(t *testing.T) {
+	rec := send(t, module(t, identity(validID, 1), stored(validID, "acme", "Acme", 1), written()), "POST", "/organizations", "", `{"code":"acme","name":"Acme"}`)
+	if rec.Code != 201 || rec.Header().Get("Location") != "/organizations/"+validID {
+		t.Fatalf("status %d, Location %q, body %s", rec.Code, rec.Header().Get("Location"), rec.Body)
+	}
+}
+
+// upload sends a raw logo body with the given Content-Type, none when
+// empty, and declared length; a length of -1 is a chunked body.
+func upload(t *testing.T, h http.Handler, path, contentType, body string, length int64) *httptest.ResponseRecorder {
+	t.Helper()
+	r := httptest.NewRequest("PUT", path, strings.NewReader(body))
+	if contentType != "" {
+		r.Header.Set("Content-Type", contentType)
+	}
+	r.ContentLength = length
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	return rec
+}
+
+// A logo the layer would refuse is refused on its headers, before any
+// statement runs or byte is stored: the module has nothing scripted.
+func TestPutLogo_RefusesBeforeAnyIO(t *testing.T) {
+	path := "/organizations/" + validID + "/logo"
+	cases := map[string]struct {
+		path, contentType string
+		length            int64
+		status            int
+		detail            string
+	}{
+		"malformed id":        {"/organizations/not-a-uuid/logo", "image/png", 3, 400, "must be a UUID"},
+		"missing type":        {path, "", 3, 415, "Content-Type"},
+		"unparsable type":     {path, "image/", 3, 415, "Content-Type"},
+		"svg is not accepted": {path, "image/svg+xml", 3, 415, "image/svg+xml"},
+		"text is not a logo":  {path, "text/plain", 3, 415, "text/plain"},
+		"chunked body":        {path, "image/png", -1, 411, "Content-Length"},
+		"over 1 MiB":          {path, "image/png", 1<<20 + 1, 413, "exceed"},
+	}
+	h := module(t)
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			body := problem(t, upload(t, h, c.path, c.contentType, "png", c.length), c.status)
+			if detail, _ := body["detail"].(string); !strings.Contains(detail, c.detail) {
+				t.Errorf("detail = %q, want it to contain %q", detail, c.detail)
+			}
+		})
+	}
+}
+
+func TestLogo_WithoutALogoIs404(t *testing.T) {
+	h := module(t, datatest.FileRows()) // the active logo read finds no row
+	problem(t, send(t, h, "GET", "/organizations/"+validID+"/logo", "", ""), 404)
+}
+
+// The lookup reads the path from its query, with or without the leading
+// slash, as the path field of the read model.
+func TestLookup_ReadsThePathFromTheQuery(t *testing.T) {
+	for _, path := range []string{"/acme", "acme", "%2Facme"} {
+		h := module(t, row())
+		if rec := send(t, h, "GET", "/organizations/lookup?path="+path, "", ""); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"path":"/acme"`) {
+			t.Errorf("lookup ?path=%s = %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}
+
+func TestDeleteLogo_WithoutALogoIs404(t *testing.T) {
+	h := module(t, datatest.FileRows()) // the active logo read finds no row
+	problem(t, send(t, h, "DELETE", "/organizations/"+validID+"/logo", "", ""), 404)
+}
+
+// The layer's own matcher reports the cycle as a conflict with
+// data.DetailConflict, the detail data.Status gives every conflict without
+// a text of its own: one conflict, a transfer under the organization's own
+// subtree, proves the wiring, with none of the error's own text. The
+// library's conflicts reach the same writer through data.Status, whose own
+// test holds every detail; the integration suite proves each end to end.
+// The instance names the request path by design, so the leak checks look
+// for what only the error names.
+func TestRoutes_AConflictCarriesItsCuratedDetail(t *testing.T) {
+	cycle := []sqltest.Response{{Affected: 0}, {Columns: []string{"count"}, Rows: [][]driver.Value{{int64(1)}}}}
+	rec := send(t, module(t, cycle...), "POST", "/organizations/"+validID+"/transfer", `"1"`, `{"parent_id":"`+parentID+`"}`)
+	if body := problem(t, rec, 409); body["detail"] != data.DetailConflict {
+		t.Errorf("detail = %v, want %q", body["detail"], data.DetailConflict)
+	}
+	for _, leak := range []string{"cycle", parentID} {
+		if strings.Contains(rec.Body.String(), leak) {
+			t.Errorf("body %s carries %q", rec.Body, leak)
+		}
+	}
+}
+
+// transfer sizes the test routes' transfers at 1 MiB/s with a second's
+// grace; a recorder has no connection deadlines for it to set.
+func transfer(limit int64) web.Transfer { return web.NewTransfer(limit, 1<<20, time.Second) }

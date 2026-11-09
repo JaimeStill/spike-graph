@@ -51,17 +51,23 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
 
 ## How it is built
 
-- **The roots.** go-web-service and slab are copied whole at go-web-service 5bb590e, import paths
-  rewritten, and committed unchanged as the baseline on go-core v0.10.0; then migrated in place,
-  so the tree holds one version of each file and the measurements come from the diff.
+- **The roots.** The root module, `github.com/JaimeStill/spike-graph`, is go-web-service copied
+  whole at 5bb590e; slab is its own module under `tools/slab`. The copies differ from 5bb590e only
+  in the module path, gofmt's import order, the compose project name, and dependencies and image
+  pins upgraded to latest, with go-core held at v0.10.0. The baseline task's merge commit is the
+  measurement baseline. Later tasks migrate the roots in place, so the tree holds one version of
+  each file and the measurements come from the diff against that commit.
 - **The candidate packages.** `graph` is forked whole from go-core v0.10.0. `lifecycle` forks only
   Coordinator and New, which take graph's types; Check, Config, Readiness, and the participation
   interfaces alias go-core's, so published go-web-sdk, whose `server.go` and `health.go` name
   them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph` takes a graph. A
   small `web` package of the spike's own holds `web.Run`. Everything else is a published
   version, never a replace directive.
-- **The stack.** The spike's own copy of go-web-service's compose stack (Postgres, Azurite, NATS,
-  and the observability profile), under its own project name and ports.
+- **The stack.** The spike runs go-web-service's compose stack (Postgres, Azurite, NATS, and the
+  observability profile) as project `spike-graph`, and the integration tier runs it as
+  `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and
+  slab's settings, so the copied files keep go-web-service's defaults; run the service and slab
+  through `mise run`.
 
 ## The path
 
