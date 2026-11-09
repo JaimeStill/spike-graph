@@ -4,12 +4,17 @@ golangci-lint = "2.15.0"
 jq = "1.8.2"
 
 [env]
-# The repository's Go modules, as directories; tasks run in each one. The baseline task adds
-# the copied service and slab, and the integration and stack tasks with their compose stack.
-GO_MODULES = "."
+# The repository's Go modules, as directories; tasks run in each one. The root module is the
+# copied go-web-service; slab is its own module under tools/. The baseline task adds the
+# integration and stack tasks with their compose stack.
+GO_MODULES = ". tools/slab"
 
+# The one check: read-only and deterministic, stopping at the first failure. vet, fix, and lint
+# read the integration suite too (-tags integration); go test runs the unit tier only, the
+# integration tier staying behind its build tag. sqlint then reads the SQL files against the
+# root module's requirements.
 [tasks.check]
-description = "Build, vet, format, fix, tidy, test, and lint every module; writes nothing"
+description = "Build, vet, format, fix, tidy, test, and lint every module, then sqlint the SQL files; writes nothing"
 run = '''
 set -eu
 export GOWORK=off
@@ -17,14 +22,17 @@ for mod in $GO_MODULES; do
   echo "check: $mod"
   cd "$MISE_PROJECT_ROOT/$mod"
   go build ./...
-  go vet ./...
+  go vet -tags integration ./...
   unformatted=$(gofmt -l .)
   if [ -n "$unformatted" ]; then echo "gofmt: unformatted files:"; echo "$unformatted"; exit 1; fi
-  go fix -diff ./...
+  go fix -tags integration -diff ./...
   go mod tidy -diff
   go test -race ./...
-  golangci-lint run ./...
+  golangci-lint run --build-tags integration ./...
 done
+echo "check: sqlint"
+cd "$MISE_PROJECT_ROOT"
+go tool sqlint
 '''
 
 [tasks.currency]

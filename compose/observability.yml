@@ -1,0 +1,72 @@
+# The observability profile: no ordinary compose invocation starts these five.
+# The collector, Loki, Tempo, and Mimir have no health check (their images
+# ship no shell; see each Dockerfile), so dependents wait on service_started.
+services:
+  otel-collector:
+    build:
+      context: otel-collector
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318"
+      # The tcp_log receiver: the service on the host streams its stdout JSON
+      # log lines here. 4319 sits beside the OTLP pair so the collector's
+      # three ingest ports read as one block.
+      - "127.0.0.1:${OTEL_LOG_PORT:-4319}:4319"
+      - "127.0.0.1:${OTEL_HEALTH_PORT:-13133}:13133"
+    depends_on:
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+      mimir:
+        condition: service_started
+
+  loki:
+    build:
+      context: loki
+    profiles: ["observability"]
+    volumes:
+      - go-web-service-loki:/loki
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+
+  tempo:
+    build:
+      context: tempo
+    profiles: ["observability"]
+    volumes:
+      - go-web-service-tempo:/var/tempo
+    ports:
+      - "127.0.0.1:${TEMPO_PORT:-3200}:3200"
+
+  mimir:
+    build:
+      context: mimir
+    profiles: ["observability"]
+    volumes:
+      - go-web-service-mimir:/data
+    ports:
+      - "127.0.0.1:${MIMIR_PORT:-9009}:9009"
+
+  grafana:
+    build:
+      context: grafana
+    profiles: ["observability"]
+    volumes:
+      - go-web-service-grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+      mimir:
+        condition: service_started
+
+volumes:
+  go-web-service-loki:
+  go-web-service-tempo:
+  go-web-service-mimir:
+  go-web-service-grafana:

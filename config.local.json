@@ -1,0 +1,22 @@
+{
+  "log": {
+    "level": "debug"
+  },
+  "server": {
+    "host": "127.0.0.1"
+  },
+  "storage": {
+    "endpoint": "http://127.0.0.1:10000/devstoreaccount1",
+    "account": "devstoreaccount1",
+    "options": {
+      "max_retries": "1"
+    }
+  },
+  "admin": {
+    "seed": "default"
+  },
+  "sweep": {
+    "outbox_age": "2m",
+    "inbox_age": "2m"
+  }
+}

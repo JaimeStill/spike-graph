@@ -1,0 +1,338 @@
+//go:build integration
+
+package integration_test
+
+import (
+	"net/http"
+	"net/url"
+	"slices"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/standards-lab/go-web-sdk/webtest"
+
+	"github.com/JaimeStill/spike-graph/integration"
+)
+
+// The organization read model and the command envelope, as the API
+// presents them.
+type organization struct {
+	ID       string  `json:"id"`
+	ParentID *string `json:"parent_id"`
+	Code     string  `json:"code"`
+	Name     string  `json:"name"`
+	Version  int64   `json:"version"`
+	Path     string  `json:"path"`
+}
+
+type identity struct {
+	ID      string `json:"id"`
+	Version int64  `json:"version"`
+}
+
+type organizationPage struct {
+	Items []organization `json:"items"`
+	Page  int            `json:"page"`
+	Size  int            `json:"size"`
+	Total *int           `json:"total"`
+	More  bool           `json:"more"`
+	Next  string         `json:"next"`
+}
+
+// total is the page's counted total, or -1 when the page omitted it.
+func (p organizationPage) total() int {
+	if p.Total == nil {
+		return -1
+	}
+	return *p.Total
+}
+
+// generalConflict is the detail of every conflict without a text of its
+// own, data.DetailConflict.
+const generalConflict = "the request conflicts with the current state"
+
+// conflict asserts a 409 whose detail is exactly the curated text and
+// whose body carries none of the error's own: no library prefix and no
+// constraint name.
+func conflict(t *testing.T, r *webtest.Response, detail string) {
+	t.Helper()
+	if p := r.Problem(t, http.StatusConflict); p.Detail != detail {
+		t.Errorf("detail = %q, want %q", p.Detail, detail)
+	}
+	for _, leak := range []string{"data:", "blobfs", "constraint", "_uq_", "_fk_", "_pk_", "violates"} {
+		if strings.Contains(string(r.Body), leak) {
+			t.Errorf("body %s carries %q", r.Body, leak)
+		}
+	}
+}
+
+// absentID is a well-formed id no row carries.
+const absentID = "00000000-0000-7000-8000-000000000000"
+
+// tree reads the seeded organizations by code.
+func tree(t *testing.T, c *webtest.Client) map[string]organization {
+	t.Helper()
+	p := webtest.Decode[organizationPage](t, c.Get(t, organizations+"?size=100"), http.StatusOK)
+	out := make(map[string]organization, len(p.Items))
+	for _, o := range p.Items {
+		out[o.Code] = o
+	}
+	return out
+}
+
+func codes(items []organization) []string {
+	out := make([]string, len(items))
+	for i, o := range items {
+		out[i] = o.Code
+	}
+	return out
+}
+
+func TestOrganization(t *testing.T) {
+	s := integration.Start(t, integration.Options{Seed: integration.Default})
+	c := s.Client()
+
+	// Every case starts from the seeded tree.
+	run := func(name string, fn func(t *testing.T)) {
+		t.Run(name, func(t *testing.T) {
+			integration.Reset(t, c, integration.Default)
+			fn(t)
+		})
+	}
+
+	run("reads", func(t *testing.T) {
+		all := tree(t, c)
+		eng := webtest.Decode[organization](t, c.Get(t, organizations+"/"+all["engineering"].ID), http.StatusOK)
+		if eng.Path != "/acme/engineering" || eng.ParentID == nil || *eng.ParentID != all["acme"].ID {
+			t.Errorf("engineering = %+v", eng)
+		}
+		byPath := webtest.Decode[organization](t, c.Get(t, organizations+"/lookup?path=/acme/engineering/platform"), http.StatusOK)
+		if byPath.ID != all["platform"].ID {
+			t.Errorf("path read = %+v", byPath)
+		}
+		_ = c.Get(t, organizations+"/"+absentID).Problem(t, http.StatusNotFound)
+		_ = c.Get(t, organizations+"/lookup?path=/acme/nowhere").Problem(t, http.StatusNotFound)
+		_ = c.Get(t, organizations+"/not-a-uuid").Problem(t, http.StatusBadRequest)
+	})
+
+	run("paging and sort", func(t *testing.T) {
+		p := webtest.Decode[organizationPage](t, c.Get(t, organizations+"?size=3&sort=-path"), http.StatusOK)
+		if p.total() != seededTotal || p.Page != 1 || p.Size != 3 || !p.More || !slices.Equal(codes(p.Items), []string{"logistics", "operations", "finance"}) {
+			t.Errorf("page 1 by -path = %v (total %d)", codes(p.Items), p.total())
+		}
+		p = webtest.Decode[organizationPage](t, c.Get(t, organizations+"?size=3&page=3&sort=code"), http.StatusOK)
+		if !slices.Equal(codes(p.Items), []string{"product"}) {
+			t.Errorf("page 3 by code = %v", codes(p.Items))
+		}
+		_ = c.Get(t, organizations+"?page=x").Problem(t, http.StatusBadRequest)
+		_ = c.Get(t, organizations+"?size=1000").Problem(t, http.StatusBadRequest)
+	})
+
+	run("cursor walk", func(t *testing.T) {
+		// Follow next from the first page to the end: every row once, in
+		// the sort's order, and no page number after the first.
+		p := webtest.Decode[organizationPage](t, c.Get(t, organizations+"?size=3&sort=-path"), http.StatusOK)
+		walked := codes(p.Items)
+		first := p
+		for p.More {
+			if p.Next == "" {
+				t.Fatalf("a page with more carried no next: %+v", p)
+			}
+			p = webtest.Decode[organizationPage](t, c.Get(t, organizations+"?size=3&sort=-path&cursor="+url.QueryEscape(p.Next)), http.StatusOK)
+			if p.Page != 0 {
+				t.Errorf("a continued page carried page %d", p.Page)
+			}
+			walked = append(walked, codes(p.Items)...)
+		}
+		want := []string{"logistics", "operations", "finance", "product", "platform", "engineering", "acme"}
+		if !slices.Equal(walked, want) || first.total() != seededTotal {
+			t.Errorf("walk by -path = %v (first total %d), want %v", walked, first.total(), want)
+		}
+		// A cursor with a page, one sent under another sort, and one that
+		// is not a cursor at all are each the request's error.
+		_ = c.Get(t, organizations+"?page=2&cursor="+url.QueryEscape(first.Next)).Problem(t, http.StatusBadRequest)
+		_ = c.Get(t, organizations+"?size=3&sort=code&cursor="+url.QueryEscape(first.Next)).Problem(t, http.StatusBadRequest)
+		_ = c.Get(t, organizations+"?cursor=not-a-cursor").Problem(t, http.StatusBadRequest)
+	})
+
+	run("filter grammar", func(t *testing.T) {
+		cases := map[string][]string{
+			"code=acme":                        {"acme"},
+			"code=acme&code=finance&sort=code": {"acme", "finance"},
+			"name[like]=" + url.QueryEscape("%ing") + "&sort=code":                {"engineering"},
+			"path[like]=" + url.QueryEscape("/acme/engineering/%") + "&sort=code": {"platform", "product"},
+			"parent_id[null]=&sort=code":                                          {"acme"},
+		}
+		for query, want := range cases {
+			p := webtest.Decode[organizationPage](t, c.Get(t, organizations+"?"+query), http.StatusOK)
+			if !slices.Equal(codes(p.Items), want) || p.total() != len(want) {
+				t.Errorf("?%s = %v (total %d), want %v", query, codes(p.Items), p.total(), want)
+			}
+		}
+		for _, query := range []string{"nope=1", "code[between]=a", "created_at=not-a-time", "id=not-a-uuid"} {
+			if p := c.Get(t, organizations+"?"+query).Problem(t, http.StatusBadRequest); p.Detail == "" {
+				t.Errorf("?%s: 400 without detail", query)
+			}
+		}
+	})
+
+	run("create", func(t *testing.T) {
+		all := tree(t, c)
+		body := map[string]any{"parent_id": all["engineering"].ID, "code": "security", "name": "Security"}
+		res := c.Post(t, organizations, body).Expect(t, http.StatusCreated)
+		var ident identity
+		res.JSON(t, &ident)
+		if ident.Version != 1 || res.Header.Get("Location") != organizations+"/"+ident.ID {
+			t.Errorf("created = %+v, Location %q", ident, res.Header.Get("Location"))
+		}
+		created := webtest.Decode[organization](t, c.Get(t, organizations+"/lookup?path=/acme/engineering/security"), http.StatusOK)
+		if created.ID != ident.ID {
+			t.Errorf("created row not readable by path: %+v", created)
+		}
+
+		conflict(t, c.Post(t, organizations, body), generalConflict)                                                             // duplicate sibling
+		conflict(t, c.Post(t, organizations, map[string]any{"parent_id": nil, "code": "acme", "name": "Acme"}), generalConflict) // duplicate root
+		conflict(t, c.Post(t, organizations, map[string]any{"parent_id": absentID, "code": "orphan", "name": "Orphan"}), generalConflict)
+		_ = c.Post(t, organizations, map[string]any{"code": "Bad_Code", "name": "X"}).Problem(t, http.StatusBadRequest)
+		_ = c.Post(t, organizations, map[string]any{"code": "ok", "name": ""}).Problem(t, http.StatusBadRequest)
+		_ = c.Post(t, organizations, map[string]any{"parent_id": "nope", "code": "ok", "name": "X"}).Problem(t, http.StatusBadRequest)
+		_ = c.Post(t, organizations, map[string]any{"codex": "ok"}).Problem(t, http.StatusBadRequest)
+		_ = c.Post(t, organizations, "{").Problem(t, http.StatusBadRequest)
+	})
+
+	run("edit", func(t *testing.T) {
+		all := tree(t, c)
+		fin := all["finance"]
+		path := organizations + "/" + fin.ID
+		body := map[string]any{"code": "fin", "name": "Finance and Accounting"}
+
+		_ = c.Put(t, path, body).Problem(t, http.StatusPreconditionRequired)
+		_ = c.Put(t, path, body, webtest.Header{Name: "If-Match", Value: `W/"1"`}).Problem(t, http.StatusBadRequest)
+		_ = c.Put(t, path, map[string]any{"code": "fin"}, webtest.IfMatch(fin.Version)).Problem(t, http.StatusBadRequest)
+		_ = c.Put(t, path, body, webtest.IfMatch(fin.Version+1)).Problem(t, http.StatusPreconditionFailed)
+		_ = c.Put(t, organizations+"/"+absentID, body, webtest.IfMatch(1)).Problem(t, http.StatusNotFound)
+
+		ident := webtest.Decode[identity](t, c.Put(t, path, body, webtest.IfMatch(fin.Version)), http.StatusOK)
+		if ident.ID != fin.ID || ident.Version != fin.Version+1 {
+			t.Errorf("edited = %+v, want version %d", ident, fin.Version+1)
+		}
+		after := webtest.Decode[organization](t, c.Get(t, path), http.StatusOK)
+		if after.Code != "fin" || after.Name != "Finance and Accounting" || after.Path != "/acme/fin" {
+			t.Errorf("after edit = %+v", after)
+		}
+		_ = c.Put(t, path, body, webtest.IfMatch(fin.Version)).Problem(t, http.StatusPreconditionFailed) // the old version is stale now
+	})
+
+	run("transfer", func(t *testing.T) {
+		all := tree(t, c)
+		platform := all["platform"]
+		path := organizations + "/" + platform.ID + "/transfer"
+
+		_ = c.Post(t, path, map[string]any{}, webtest.IfMatch(platform.Version)).Problem(t, http.StatusBadRequest) // key required
+		_ = c.Post(t, path, map[string]any{"parent_id": all["operations"].ID}).Problem(t, http.StatusPreconditionRequired)
+		_ = c.Post(t, path, map[string]any{"parent_id": all["operations"].ID}, webtest.IfMatch(9)).Problem(t, http.StatusPreconditionFailed)
+		conflict(t, c.Post(t, path, map[string]any{"parent_id": absentID}, webtest.IfMatch(platform.Version)), generalConflict)
+
+		// A cycle: acme under its own descendant, and a node under itself.
+		acme := all["acme"]
+		conflict(t, c.Post(t, organizations+"/"+acme.ID+"/transfer", map[string]any{"parent_id": all["product"].ID}, webtest.IfMatch(acme.Version)), generalConflict)
+		conflict(t, c.Post(t, path, map[string]any{"parent_id": platform.ID}, webtest.IfMatch(platform.Version)), generalConflict)
+
+		// The move, and the path recomposed beneath the new parent.
+		ident := webtest.Decode[identity](t, c.Post(t, path, map[string]any{"parent_id": all["operations"].ID}, webtest.IfMatch(platform.Version)), http.StatusOK)
+		if ident.Version != platform.Version+1 {
+			t.Errorf("transferred = %+v", ident)
+		}
+		moved := webtest.Decode[organization](t, c.Get(t, organizations+"/lookup?path=/acme/operations/platform"), http.StatusOK)
+		if moved.ID != platform.ID {
+			t.Errorf("moved row = %+v", moved)
+		}
+		_ = c.Get(t, organizations+"/lookup?path=/acme/engineering/platform").Problem(t, http.StatusNotFound)
+
+		// Moving a subtree recomposes every descendant's path.
+		eng := all["engineering"]
+		webtest.Decode[identity](t, c.Post(t, organizations+"/"+eng.ID+"/transfer", map[string]any{"parent_id": all["finance"].ID}, webtest.IfMatch(eng.Version)), http.StatusOK)
+		if p := webtest.Decode[organization](t, c.Get(t, organizations+"/"+all["product"].ID), http.StatusOK); p.Path != "/acme/finance/engineering/product" {
+			t.Errorf("descendant path after subtree move = %q", p.Path)
+		}
+
+		// The root move: null parent.
+		ident = webtest.Decode[identity](t, c.Post(t, path, map[string]any{"parent_id": nil}, webtest.IfMatch(ident.Version)), http.StatusOK)
+		root := webtest.Decode[organization](t, c.Get(t, organizations+"/lookup?path=/platform"), http.StatusOK)
+		if root.ParentID != nil || root.Path != "/platform" || root.Version != ident.Version {
+			t.Errorf("root move = %+v", root)
+		}
+		conflict(t, c.Post(t, organizations, map[string]any{"parent_id": nil, "code": "platform", "name": "Dup"}), generalConflict) // root code unique
+	})
+
+	run("concurrent transfers under the lock", func(t *testing.T) {
+		all := tree(t, c)
+		eng, ops := all["engineering"], all["operations"]
+
+		// Each sibling moves under the other at once. Without the tree
+		// lock both cycle checks pass and the tree gains a cycle; under
+		// it the second transfer sees the first and is refused.
+		var wg sync.WaitGroup
+		results := make([]int, 2)
+		move := func(i int, node, under organization) {
+			defer wg.Done()
+			cl := webtest.NewClient(s.URL())
+			results[i] = cl.Post(t, organizations+"/"+node.ID+"/transfer", map[string]any{"parent_id": under.ID}, webtest.IfMatch(node.Version)).Status
+		}
+		wg.Add(2)
+		go move(0, eng, ops)
+		go move(1, ops, eng)
+		wg.Wait()
+
+		ok, conflict := 0, 0
+		for _, st := range results {
+			switch st {
+			case http.StatusOK:
+				ok++
+			case http.StatusConflict:
+				conflict++
+			}
+		}
+		if ok != 1 || conflict != 1 {
+			t.Fatalf("statuses = %v, want one 200 and one 409", results)
+		}
+		// The tree still resolves: every node has a path from a root.
+		after := tree(t, c)
+		if len(after) != seededTotal {
+			t.Errorf("tree after concurrent transfers has %d nodes", len(after))
+		}
+		for code, o := range after {
+			if o.Path == "" || o.Path[0] != '/' {
+				t.Errorf("%s path = %q", code, o.Path)
+			}
+		}
+	})
+
+	run("delete", func(t *testing.T) {
+		all := tree(t, c)
+		leaf, parent := all["logistics"], all["operations"]
+
+		_ = c.Delete(t, organizations+"/"+leaf.ID).Problem(t, http.StatusPreconditionRequired)
+		_ = c.Delete(t, organizations+"/"+leaf.ID, webtest.IfMatch(leaf.Version+1)).Problem(t, http.StatusPreconditionFailed)
+		_ = c.Delete(t, organizations+"/"+absentID, webtest.IfMatch(1)).Problem(t, http.StatusNotFound)
+		_ = c.Delete(t, organizations+"/"+parent.ID, webtest.IfMatch(parent.Version)).Problem(t, http.StatusConflict) // children block
+		// The default state seeds each organization a logo, and a logo
+		// blocks its organization's delete until the logo's own delete.
+		_ = c.Delete(t, organizations+"/"+leaf.ID, webtest.IfMatch(leaf.Version)).Problem(t, http.StatusConflict)
+		for _, o := range []organization{leaf, parent} {
+			c.Delete(t, organizations+"/"+o.ID+"/logo").Expect(t, http.StatusNoContent)
+		}
+
+		c.Delete(t, organizations+"/"+leaf.ID, webtest.IfMatch(leaf.Version)).Expect(t, http.StatusNoContent)
+		_ = c.Get(t, organizations+"/"+leaf.ID).Problem(t, http.StatusNotFound)
+		c.Delete(t, organizations+"/"+parent.ID, webtest.IfMatch(parent.Version)).Expect(t, http.StatusNoContent) // now a leaf
+		if p := webtest.Decode[organizationPage](t, c.Get(t, organizations), http.StatusOK); p.total() != seededTotal-2 {
+			t.Errorf("total after deletes = %d", p.total())
+		}
+	})
+
+	if code := s.Stop(t); code != 0 {
+		t.Fatalf("exit = %d:\n%s", code, s.Output())
+	}
+}
