@@ -20,8 +20,8 @@ type node struct {
 	handle Ref
 }
 
-// Node is one node of a [Graph], defined by [Graph.Define]: a name and a
-// constructor of a T. It is a handle, not a value; a constructor reaches
+// Node is one node of a [Graph], defined by [Graph.Define], [Graph.Value],
+// or [Fresh]: a name and a constructor of a T. It is a handle, not a value; a constructor reaches
 // the value through [Scope.Use], and a program through [System.Get].
 type Node[T any] struct {
 	core *node

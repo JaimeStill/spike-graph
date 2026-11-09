@@ -87,7 +87,7 @@ Door          two-way: new packages in the spike repository that nothing imports
 
 ## Progress
 
-slices 5/5 committed · standards — · spec — · editor —
+slices 5/5 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
@@ -115,6 +115,17 @@ slices 5/5 committed · standards — · spec — · editor —
 - candidate: LayerOf panics with a "graph: " message for a node not in the System, as Get does.
 - candidate: LayerOf panics for a group handle; a group has no layer.
 - candidate: library candidate packages live under sdk/<package> (sdk/graph, sdk/lifecycle); later forks follow the same rule.
+- candidate: Replace keeps a node's After and In; in v0.10.0 a substitute constructor dropped its Scope.After edges, so a test fixture's substitute now keeps its order.
+- candidate: groups and nodes share one namespace.
+- candidate: a cycle's panic path names the groups it passes through.
+- candidate: Define validates every option before it changes the Graph, and panics on a nil option.
+- candidate: Value's and Fresh's panic messages name the call that was made.
+- candidate: After doesn't deduplicate its targets as Scope.After did; layering is unaffected.
+- candidate: a group's members build in definition order.
+- candidate: String prints `N: a, b` per layer with no trailing newline; the empty System prints "".
+- candidate: LayerOf also panics for a nil ref.
+- candidate: sdk/lifecycle's aliases live in one alias.go; the forked files keep go-core's names.
+- candidate: noted for adapters: the design note makes Value a method but Fresh a package function, though Go 1.27 allows g.Fresh[T](name); a finding for the answer.
 
 ## Pending edits
 

@@ -57,12 +57,14 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
   pins upgraded to latest, with go-core held at v0.10.0. The baseline task's merge commit is the
   measurement baseline. Later tasks migrate the roots in place, so the tree holds one version of
   each file and the measurements come from the diff against that commit.
-- **The candidate packages.** `graph` is forked whole from go-core v0.10.0. `lifecycle` forks only
-  Coordinator and New, which take graph's types; Check, Config, Readiness, and the participation
-  interfaces alias go-core's, so published go-web-sdk, whose `server.go` and `health.go` name
-  them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph` takes a graph. A
-  small `web` package of the spike's own holds `web.Run`. Everything else is a published
-  version, never a replace directive.
+- **The candidate packages.** Each forked library package lives under `sdk/<package>`, beside
+  the copied service's own `sdk` package. `sdk/graph` is go-core v0.10.0's `graph`, forked whole.
+  `sdk/lifecycle` forks Coordinator and New, which take graph's types, and Readiness, since
+  go-core's Readiness binds only through go-core's unexported bind. Check, Config, and the
+  participation interfaces alias go-core's, so published go-web-sdk, whose `server.go` and
+  `health.go` name them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph`
+  takes a graph. A small `web` package of the spike's own holds `web.Run`. Everything else is a
+  published version, never a replace directive.
 - **The stack.** The spike runs go-web-service's compose stack (Postgres, Azurite, NATS, and the
   observability profile) as project `spike-graph`, and the integration tier runs it as
   `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and

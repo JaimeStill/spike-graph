@@ -103,9 +103,10 @@
 // a recovered abort, a Define, Value, Fresh, Group, or Replace after
 // Build, a Get or LayerOf of a node not in the System, a LayerOf of a
 // group, which has no layer, a nil constructor, option, or observer, a nil
-// ref given to After, In, or Build, and an empty or duplicate name, nodes
-// and groups sharing one name space. Define checks its options, for a nil
-// ref or one defined on another Graph, before it changes the Graph. A cycle
+// ref given to After, In, Build, or LayerOf, and an empty or duplicate
+// name, nodes and groups sharing one name space. Define checks its options,
+// for a nil ref or one defined on another Graph, before it changes the
+// Graph. A cycle
 // closed by an order-only edge, through a group included, panics at Build
 // with its path. Build checks its roots, for a nil ref or one defined on
 // another Graph, before it constructs any of them, so a mistake in any root
