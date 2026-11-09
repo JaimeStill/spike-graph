@@ -18,9 +18,9 @@ type Graph struct {
 	// built is set by the first Build, which freezes the description:
 	// Define and Replace panic after it.
 	built bool
-	// observers are called, in the order added, as a Build begins each
-	// node.
-	observers []func(name string)
+	// observers are called, in the order added, with a node's handle as a
+	// Build begins the node.
+	observers []func(Ref)
 }
 
 // New returns an empty Graph.
@@ -107,7 +107,9 @@ func define[T any](g *Graph, call, name string, ctor func(*Scope) (T, error), op
 			grp.members = append(grp.members, core)
 		}
 	}
-	return &Node[T]{core: core}
+	n := &Node[T]{core: core}
+	core.handle = n
+	return n
 }
 
 // defined reports whether name is taken on g, by a node or a group.
@@ -150,14 +152,15 @@ func (g *Graph) Replace[T any](n *Node[T], ctor func(*Scope) (T, error)) {
 	n.core.ctor = erase(ctor)
 }
 
-// Observe adds fn, which every later Build calls with a node's name as it
+// Observe adds fn, which every later Build calls with a node's handle as it
 // begins to construct the node, before the constructor runs: each node a
 // Build reaches, once, in the order it reaches them depth-first, the one
-// whose constructor fails included. It is for tracing what a Build
-// constructs, such as a test asserting which nodes a run brought up; fn
-// sees only the name and cannot change the Build. Observe panics on a nil
-// fn.
-func (g *Graph) Observe(fn func(name string)) {
+// whose constructor fails included. The handle is the one [Graph.Define],
+// [Graph.Value], or [Fresh] returned, so fn compares it with a held handle
+// rather than a name. It is for tracing what a Build constructs, such as a
+// test asserting which nodes a run brought up; fn cannot change the Build.
+// Observe panics on a nil fn.
+func (g *Graph) Observe(fn func(Ref)) {
 	if fn == nil {
 		panic("graph: Observe with a nil function")
 	}

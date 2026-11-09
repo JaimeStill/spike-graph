@@ -15,6 +15,9 @@ type entry struct {
 	// uses are the nodes the constructor reached through Use, deduplicated,
 	// in the order it first reached them.
 	uses []*node
+	// layer is the node's layer in the System, set once the Build has
+	// constructed every root.
+	layer int
 }
 
 // build is the state of one [Graph.Build].
@@ -94,7 +97,7 @@ func (b *build) construct(n *node) error {
 	b.entries[n] = e
 	b.stack = append(b.stack, n)
 	for _, observe := range b.graph.observers {
-		observe(n.name)
+		observe(n.handle)
 	}
 	s := &Scope{build: b, entry: e}
 	defer func() {

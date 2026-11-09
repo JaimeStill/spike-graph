@@ -24,7 +24,7 @@
 //   - [Graph.Replace], which swaps a node's constructor before Build, for a
 //     test's substitute, keeping its options
 //   - [Graph.Observe], which adds a function a Build calls with each node's
-//     name as it begins to construct it, for tracing what a Build reaches
+//     handle as it begins to construct it, for tracing what a Build reaches
 //   - [Graph.Build], which constructs what the roots reach into a System
 //   - [Node], a typed handle on one node, and [Node.Name], its name
 //   - [Ref], any Node whatever its type or a Group, sealed to the two, and
@@ -35,7 +35,10 @@
 //   - [System], what one Build constructed
 //   - [System.Get], which returns a node's value
 //   - [System.Layers], which returns the built nodes in layers
-//   - [Dependency], one built node: its name and value
+//   - [System.LayerOf], which returns one node's layer
+//   - [System.String], which prints the layer table, one line per layer,
+//     for a failing test's message
+//   - [Dependency], one built node: its name, value, and handle
 //
 // # Discovery
 //
@@ -72,6 +75,17 @@
 // layers, so the nodes of one layer can start together once the layers
 // below them have.
 //
+// # Introspection
+//
+// What a Build reports names a node by its handle, the *Node[T] that
+// [Graph.Define], [Graph.Value], or [Fresh] returned, so a test compares
+// handles rather than names: [Dependency.Ref] is that handle, as is the
+// [Ref] an observer added by [Graph.Observe] receives, and
+// [System.LayerOf] takes one and returns the node's layer, numbered as
+// Layers numbers them. [System.String] prints the layer table, a line such
+// as "1: cache, db" per layer, so a failing test can show the whole
+// layering.
+//
 // # Errors and panics
 //
 // A constructor's error fails the Build, labelled with its node's name and
@@ -86,8 +100,9 @@
 // Wiring mistakes panic with a "graph: " message, as each symbol's
 // documentation states: a dependency cycle, a node or group used on a
 // Graph it was not defined on, a Scope used after its constructor returned,
-// a recovered abort, a Define, Value, Fresh, Group, or Replace after Build, a Get of a
-// node not in the System, a nil constructor, option, or observer, a nil
+// a recovered abort, a Define, Value, Fresh, Group, or Replace after Build, a Get or
+// LayerOf of a node not in the System, a LayerOf of a group, which has no
+// layer, a nil constructor, option, or observer, a nil
 // ref given to After, In, or Build, and an empty or duplicate name, nodes
 // and groups sharing one name space. Define checks its options, for a nil
 // ref or one defined on another Graph, before it changes the Graph. A cycle

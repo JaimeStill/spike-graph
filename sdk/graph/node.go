@@ -14,6 +14,10 @@ type node struct {
 	// groups. A Build expands a group to its members then, and drops the
 	// targets not in the System when it computes the layers.
 	after []Ref
+	// handle is the *Node[T] that defined the node, the one handle a Build
+	// passes to an observer and a System puts in [Dependency.Ref], so a
+	// caller compares it with what Define returned.
+	handle Ref
 }
 
 // Node is one node of a [Graph], defined by [Graph.Define]: a name and a

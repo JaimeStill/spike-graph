@@ -319,15 +319,15 @@ func TestBuild_ForeignPanicsPassThrough(t *testing.T) {
 	t.Fatal("Build returned")
 }
 
-func TestLayers_DependencyCarriesNameAndValue(t *testing.T) {
+func TestLayers_DependencyCarriesNameValueAndRef(t *testing.T) {
 	g := graph.New()
 	db := g.Define("database", func(*graph.Scope) (string, error) { return "pool", nil })
 	top := g.Define("top", func(s *graph.Scope) (string, error) { return "over " + s.Use(db), nil })
 	sys := mustBuild(t, g, top)
 
 	want := [][]graph.Dependency{
-		{{Name: "database", Value: "pool"}},
-		{{Name: "top", Value: "over pool"}},
+		{{Name: "database", Value: "pool", Ref: db}},
+		{{Name: "top", Value: "over pool", Ref: top}},
 	}
 	if got := sys.Layers(); !slices.EqualFunc(got, want, slices.Equal) {
 		t.Fatalf("Layers = %v, want %v", got, want)
@@ -444,9 +444,9 @@ func TestReplace_SubstitutesTheConstructor(t *testing.T) {
 
 func TestObserve_SeesEachNodeABuildBegins(t *testing.T) {
 	g := graph.New()
-	var seen, again []string
-	g.Observe(func(name string) { seen = append(seen, name) })
-	g.Observe(func(name string) { again = append(again, name) })
+	var seen, again []graph.Ref
+	g.Observe(func(r graph.Ref) { seen = append(seen, r) })
+	g.Observe(func(r graph.Ref) { again = append(again, r) })
 	var order []string
 	leaf := g.Define("leaf", func(*graph.Scope) (int, error) {
 		order = append(order, "construct leaf")
@@ -455,17 +455,18 @@ func TestObserve_SeesEachNodeABuildBegins(t *testing.T) {
 	g.Define("unreached", func(*graph.Scope) (int, error) { return 0, nil })
 	mid := g.Define("mid", func(s *graph.Scope) (int, error) { return s.Use(leaf), nil })
 	top := g.Define("top", func(s *graph.Scope) (int, error) { return s.Use(mid) + s.Use(leaf), nil })
-	g.Observe(func(name string) { order = append(order, "observe "+name) })
+	g.Observe(func(r graph.Ref) { order = append(order, "observe "+r.Name()) })
 
 	if _, err := g.Build(top); err == nil {
 		t.Fatal("Build succeeded, want the leaf's error")
 	}
 
 	// Depth-first from the root, each node once, the failing leaf included,
-	// and never a node the root does not reach.
-	want := []string{"top", "mid", "leaf"}
+	// and never a node the root does not reach. Each is the handle Define
+	// returned, compared by identity.
+	want := []graph.Ref{top, mid, leaf}
 	if !slices.Equal(seen, want) || !slices.Equal(again, want) {
-		t.Fatalf("observed %v and %v, want %v from each observer", seen, again, want)
+		t.Fatalf("observed %v and %v, want %v from each observer", refNames(seen), refNames(again), refNames(want))
 	}
 	// An observer sees a node before its constructor runs.
 	if wantOrder := []string{"observe top", "observe mid", "observe leaf", "construct leaf"}; !slices.Equal(order, wantOrder) {

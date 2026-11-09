@@ -14,11 +14,16 @@ type System struct {
 	layers  [][]*entry
 }
 
-// Dependency is one built node: its name and its constructed value. A
-// lifecycle reads what the node takes part in from the value's methods.
+// Dependency is one built node: its name, its constructed value, and its
+// handle. A lifecycle reads what the node takes part in from the value's
+// methods.
 type Dependency struct {
 	Name  string
 	Value any
+	// Ref is the handle [Graph.Define], [Graph.Value], or [Fresh] returned
+	// for the node, so dep.Ref == graph.Ref(handle) holds and a test
+	// compares handles rather than names.
+	Ref Ref
 }
 
 // Get returns n's value in s. It panics when n is not in s: a node the
@@ -50,10 +55,61 @@ func (s *System) Layers() [][]Dependency {
 			out[i][j] = Dependency{
 				Name:  e.node.name,
 				Value: e.value,
+				Ref:   e.node.handle,
 			}
 		}
 	}
 	return out
+}
+
+// LayerOf returns the layer of ref's node in s, numbered as
+// [System.Layers] numbers them, layer 0 first. It panics when ref is a nil
+// node, a node not in s (one the roots did not reach, or one defined on
+// another Graph), or a [Group], which has no layer of its own.
+func (s *System) LayerOf(ref Ref) int {
+	if ref == nil {
+		panic("graph: LayerOf of a nil node")
+	}
+	owner, nodes := ref.expand()
+	if owner == nil {
+		panic(fmt.Sprintf("graph: LayerOf of a nil %s", ref.kind()))
+	}
+	if ref.kind() == "group" {
+		panic(fmt.Sprintf("graph: LayerOf of %q, a group, which has no layer", ref.Name()))
+	}
+	e, ok := s.entries[nodes[0]]
+	if !ok {
+		panic(fmt.Sprintf("graph: LayerOf of %q, a node not in the System", ref.Name()))
+	}
+	return e.layer
+}
+
+// String returns the layer table, one line per layer, layer 0 first: the
+// layer's number, a colon, and its nodes' names in definition order,
+// separated by commas, as in
+//
+//	0: config, logger
+//	1: database
+//	2: server
+//
+// with no newline after the last line. It is for a failing test's message.
+// An empty System returns the empty string.
+func (s *System) String() string {
+	var b strings.Builder
+	for i, layer := range s.layers {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		fmt.Fprintf(&b, "%d:", i)
+		for j, e := range layer {
+			if j > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte(' ')
+			b.WriteString(e.node.name)
+		}
+	}
+	return b.String()
 }
 
 // system computes the layers of b's entries by longest path and returns
@@ -112,6 +168,7 @@ func (b *build) system() *System {
 	var layers [][]*entry
 	for _, e := range ordered {
 		l := layer(e.node)
+		e.layer = l
 		for len(layers) <= l {
 			layers = append(layers, nil)
 		}

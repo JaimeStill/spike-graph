@@ -31,7 +31,7 @@ func TestGroup_RootBuildsEveryMemberInDefinitionOrder(t *testing.T) {
 	c := counter{}
 	g := graph.New()
 	var seen []string
-	g.Observe(func(name string) { seen = append(seen, name) })
+	g.Observe(func(r graph.Ref) { seen = append(seen, r.Name()) })
 	workers := g.Group("workers")
 	g.Define("first", constant(c, "first", 1), graph.In(workers))
 	g.Define("outsider", constant(c, "outsider", 2))
@@ -102,7 +102,7 @@ func TestGroup_MembershipDefinedAfterItsUse(t *testing.T) {
 func TestGroup_EmptyBuildsAndOrdersNothing(t *testing.T) {
 	g := graph.New()
 	var seen []string
-	g.Observe(func(name string) { seen = append(seen, name) })
+	g.Observe(func(r graph.Ref) { seen = append(seen, r.Name()) })
 	empty := g.Group("empty")
 	g.Define("unreached", zero)
 	base := g.Define("base", zero)
