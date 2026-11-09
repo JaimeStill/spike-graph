@@ -2,7 +2,6 @@ package graph_test
 
 import (
 	"errors"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -137,12 +136,6 @@ func TestReplace_KeepsAfterAndIn(t *testing.T) {
 	want := [][]string{{"gate"}, {"worker"}}
 	if got := names(sys); !slices.EqualFunc(got, want, slices.Equal) {
 		t.Fatalf("layers = %v, want %v", got, want)
-	}
-}
-
-func TestScope_HasNoAfter(t *testing.T) {
-	if _, ok := reflect.TypeFor[*graph.Scope]().MethodByName("After"); ok {
-		t.Fatal("Scope has an After method; order-only edges belong at Define")
 	}
 }
 

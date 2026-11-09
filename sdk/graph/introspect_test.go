@@ -75,14 +75,13 @@ func TestDependency_RefIsTheHandle(t *testing.T) {
 		t.Fatalf("saw %d nodes, want %d", seen, len(want))
 	}
 	// The Ref asserts back to the typed handle, which Get takes.
-	for _, layer := range sys.Layers() {
-		for _, d := range layer {
-			if n, ok := d.Ref.(*graph.Node[*bool]); ok {
-				if n != h.gate || sys.Get(n) != d.Value {
-					t.Errorf("gate's Ref does not reach its value through Get")
-				}
-			}
-		}
+	d := dependency(t, sys, "gate")
+	n, ok := d.Ref.(*graph.Node[*bool])
+	if !ok {
+		t.Fatalf("gate's Ref is %T, want *graph.Node[*bool]", d.Ref)
+	}
+	if n != h.gate || sys.Get(n) != d.Value {
+		t.Errorf("gate's Ref does not reach its value through Get")
 	}
 }
 
