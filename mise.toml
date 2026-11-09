@@ -128,7 +128,7 @@ docker compose up -d --wait --build
 APP_DATABASE_PORT=$POSTGRES_PORT APP_STORAGE_ENDPOINT=http://127.0.0.1:$AZURITE_BLOB_PORT/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:$NATS_PORT go test -race -count=1 -tags integration ./integration/
 '''
 
-# slab is its own module under tools/ so go-cli-sdk, x/term, and x/sys never enter cmd/server's
+# slab is its own module under tools/ so go-cli-sdk and x/term never enter cmd/server's
 # dependency graph. Running from that directory, rather than passing through at the root, means a
 # clone without a go.work still resolves slab's dependencies against the published releases.
 [tasks.slab]
