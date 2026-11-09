@@ -67,9 +67,28 @@ cd "$MISE_PROJECT_ROOT"
 go tool sqlint
 '''
 
+# Currency: report what trails its latest, and the convenience that upgrades it.
 [tasks.currency]
 description = "Report every requirement, Go version, tool, action pin, and image tag behind its latest; writes nothing"
 run = "scripts/currency.sh"
+
+[tasks.upgrade]
+description = "Upgrade every module's go directive and direct requirements and the local mise tools to their latest, rewriting go.mod and mise.toml"
+run = '''
+set -eu
+export GOWORK=off
+# The go directive follows the current Go minor, with no toolchain line.
+go_minor=$(mise latest go | cut -d. -f1,2)
+for mod in $GO_MODULES; do
+  cd "$MISE_PROJECT_ROOT/$mod"
+  go mod edit -go="$go_minor" -toolchain=none
+  direct=$(go mod edit -json | jq -r '.Require[]? | select(.Indirect | not) | .Path')
+  [ -z "$direct" ] || go get $(printf '%s@latest ' $direct)
+  go mod tidy
+done
+cd "$MISE_PROJECT_ROOT"
+mise upgrade --bump --local
+'''
 
 # Start the observability profile first (`mise run otel:up`): the task opens a TCP connection to
 # the collector's log port before it builds anything and exits when nothing answers. tee then
