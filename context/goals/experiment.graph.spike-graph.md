@@ -87,7 +87,7 @@ Door          two-way: new packages in the spike repository that nothing imports
 
 ## Progress
 
-slices 0/5 committed · standards — · spec — · editor —
+slices 5/5 committed · standards — · spec — · editor —
 
 ## Decisions
 
