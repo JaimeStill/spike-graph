@@ -128,6 +128,14 @@ docker compose up -d --wait --build
 APP_DATABASE_PORT=5441 APP_STORAGE_ENDPOINT=http://127.0.0.1:10021/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:4231 go test -race -count=1 -tags integration ./integration/
 '''
 
+# slab is its own module under tools/ so go-cli-sdk, x/term, and x/sys never enter cmd/server's
+# dependency graph. Running from that directory, rather than passing through at the root, means a
+# clone without a go.work still resolves slab's dependencies against the published releases.
+[tasks.slab]
+description = "Run slab, the narrated-scenario runner (`mise run slab -- scenario <name>`)"
+dir = "tools/slab"
+run = "go run ./cmd/slab"
+
 # The development stacks: compose.yml's PostgreSQL, Azurite, and NATS (db:) and its observability
 # profile (otel:), whose data lives in named volumes that each group's down keeps and its reset
 # drops. Each runs as the spike-graph project on [env]'s ports.
