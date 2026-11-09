@@ -74,7 +74,7 @@ func (s *System) LayerOf(ref Ref) int {
 	if owner == nil {
 		panic(fmt.Sprintf("graph: LayerOf of a nil %s", ref.kind()))
 	}
-	if ref.kind() == "group" {
+	if _, ok := ref.(*Group); ok {
 		panic(fmt.Sprintf("graph: LayerOf of %q, a group, which has no layer", ref.Name()))
 	}
 	e, ok := s.entries[nodes[0]]

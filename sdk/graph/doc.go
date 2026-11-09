@@ -71,9 +71,9 @@
 // # Layers
 //
 // The layers are the longest-path layering of the discovered Use edges
-// and the declared After edges, as [System.Layers] states: every node's dependencies sit in lower
-// layers, so the nodes of one layer can start together once the layers
-// below them have.
+// and the declared After edges, as [System.Layers] states: every node's
+// dependencies sit in lower layers, so the nodes of one layer can start
+// together once the layers below them have.
 //
 // # Introspection
 //
@@ -100,9 +100,9 @@
 // Wiring mistakes panic with a "graph: " message, as each symbol's
 // documentation states: a dependency cycle, a node or group used on a
 // Graph it was not defined on, a Scope used after its constructor returned,
-// a recovered abort, a Define, Value, Fresh, Group, or Replace after Build, a Get or
-// LayerOf of a node not in the System, a LayerOf of a group, which has no
-// layer, a nil constructor, option, or observer, a nil
+// a recovered abort, a Define, Value, Fresh, Group, or Replace after
+// Build, a Get or LayerOf of a node not in the System, a LayerOf of a
+// group, which has no layer, a nil constructor, option, or observer, a nil
 // ref given to After, In, or Build, and an empty or duplicate name, nodes
 // and groups sharing one name space. Define checks its options, for a nil
 // ref or one defined on another Graph, before it changes the Graph. A cycle

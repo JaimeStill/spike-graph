@@ -63,8 +63,7 @@ func (g *Graph) Value[T any](name string, v T) *Node[T] {
 // Builds give two distinct pointers, so a value a run mutates, a readiness
 // flag or a gate, starts zero in every System. Fresh panics as
 // [Graph.Define] does: once g has run a Build, or when name is empty or
-// already defined on g, the message naming Fresh. It is a function, not a
-// method, as the design note writes it.
+// already defined on g, the message naming Fresh.
 func Fresh[T any](g *Graph, name string) *Node[*T] {
 	return define(g, "Fresh", name, func(*Scope) (*T, error) { return new(T), nil }, nil)
 }
@@ -137,8 +136,9 @@ func (g *Graph) resolve(r Ref, op string) []*node {
 
 // Replace swaps n's constructor for ctor, which every later Build runs in
 // its place exactly as it would a defined one. It swaps only the
-// constructor: n keeps the [After] and [In] it was defined with. Replace panics once g has
-// run a Build, when n was defined on another Graph, or when ctor is nil.
+// constructor: n keeps the [After] and [In] it was defined with. Replace
+// panics once g has run a Build, when n was defined on another Graph, or
+// when ctor is nil.
 func (g *Graph) Replace[T any](n *Node[T], ctor func(*Scope) (T, error)) {
 	if g.built {
 		panic(fmt.Sprintf("graph: Replace of %q after Build", n.core.name))
