@@ -2,6 +2,7 @@
 go = "1.27.3"
 golangci-lint = "2.15.0"
 jq = "1.8.2"
+"aqua:google/go-containerregistry" = "0.22.1"
 
 [env]
 APP_ENV = "local"
@@ -67,7 +68,7 @@ go tool sqlint
 '''
 
 [tasks.currency]
-description = "Report every requirement, Go version, tool, and action pin behind its latest; writes nothing"
+description = "Report every requirement, Go version, tool, action pin, and image tag behind its latest; writes nothing"
 run = "scripts/currency.sh"
 
 # Start the observability profile first (`mise run otel:up`): the task opens a TCP connection to
