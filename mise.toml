@@ -4,10 +4,41 @@ golangci-lint = "2.15.0"
 jq = "1.8.2"
 
 [env]
+APP_ENV = "local"
 # The repository's Go modules, as directories; tasks run in each one. The root module is the
-# copied go-web-service; slab is its own module under tools/. The baseline task adds the
-# integration and stack tasks with their compose stack.
+# copied go-web-service; slab is its own module under tools/.
 GO_MODULES = ". tools/slab"
+
+# The spike's development stack runs beside go-web-service's on the same host, so every
+# host-published port moves off go-web-service's defaults here, and nowhere else: the copied
+# compose files, configs, harness, and Go code keep their defaults and read these variables.
+# compose.yml names the project spike-graph, so its containers and volumes are the spike's own.
+# Ports between containers (Grafana's datasources, the collector's exporters) are unchanged.
+#
+# The compose port variables compose.yml and compose/*.yml read.
+POSTGRES_PORT = "5440"
+AZURITE_BLOB_PORT = "10020"
+NATS_PORT = "4230"
+OTEL_GRPC_PORT = "4327"
+OTEL_HTTP_PORT = "4328"
+OTEL_LOG_PORT = "4329"
+OTEL_HEALTH_PORT = "13143"
+LOKI_PORT = "3110"
+TEMPO_PORT = "3210"
+MIMIR_PORT = "9019"
+GRAFANA_PORT = "3010"
+# The service's overrides of config.json and config.local.json, which name the default ports.
+# The integration harness reads the same variables; the integration task overrides the
+# database, store, and broker with its own stack's.
+APP_SERVER_PORT = "8090"
+APP_DATABASE_PORT = "5440"
+APP_STORAGE_ENDPOINT = "http://127.0.0.1:10020/devstoreaccount1"
+APP_NATS_URL = "nats://127.0.0.1:4230"
+APP_OBSERVABILITY_ENDPOINT = "127.0.0.1:4327"
+# slab's run settings, its defaults likewise the default ports.
+SLAB_BASE = "http://127.0.0.1:8090"
+SLAB_GRAFANA = "http://127.0.0.1:3010"
+SLAB_NATS = "nats://127.0.0.1:4230"
 
 # The one check: read-only and deterministic, stopping at the first failure. vet, fix, and lint
 # read the integration suite too (-tags integration); go test runs the unit tier only, the
@@ -38,3 +69,105 @@ go tool sqlint
 [tasks.currency]
 description = "Report every requirement, Go version, tool, and action pin behind its latest; writes nothing"
 run = "scripts/currency.sh"
+
+# Start the observability profile first (`mise run otel:up`): the task opens a TCP connection to
+# the collector's log port before it builds anything and exits when nothing answers. tee then
+# copies every stdout line to the terminal and to that socket. If the collector goes away while
+# the service runs, the chain breaks on a later log write and SIGPIPE kills the service, so
+# restart the profile only while serve is stopped. The shell is bash, not sh, because /dev/tcp is
+# a bash pseudo-device. The port has no fallback: [env] sets it, and go-web-service's default
+# would reach that stack's collector.
+#
+# Ctrl-C reaches every process in the pipeline at once. The server drains and logs "server
+# stopped" a moment later, so tee has to outlive the signal (-i ignores it) or that last write
+# hits a dead pipe and SIGPIPE kills the server instead. A socket cannot be opened by path, so it
+# takes tee's stdout through a dup, and the terminal, saved on fd 4, is the path argument.
+[tasks.serve]
+description = "Run the service locally, streaming its logs to the observability collector"
+shell = "bash -c"
+run = '''
+exec 3>/dev/tcp/127.0.0.1/${OTEL_LOG_PORT} || exit
+exec 4>&1
+go run ./cmd/server | tee -i /dev/fd/4 >&3
+'''
+
+# The integration tier runs the same compose definition as its own project on its own ports, so
+# the development stack and its data are never touched, and tears it down with its volumes when
+# the suite ends, pass or fail, printing the stack's logs first on a failure. The exports and the
+# test's APP_* overrides replace [env]'s development ports, so the suite never reaches the
+# development stack's database, store, or broker. APP_OBSERVABILITY_ENDPOINT stays [env]'s: the
+# integration stack has no collector, and the harness exports to the development one when it is
+# up, as go-web-service's does to its own.
+[tasks.integration]
+description = "Start an isolated compose stack, run the integration tier against it, and tear it down"
+run = '''
+set -e
+export COMPOSE_PROJECT_NAME=spike-graph-integration POSTGRES_PORT=5441 AZURITE_BLOB_PORT=10021 NATS_PORT=4231
+trap 'rc=$?; [ $rc -eq 0 ] || docker compose logs; docker compose down -v; exit $rc' EXIT
+docker compose up -d --wait --build
+APP_DATABASE_PORT=5441 APP_STORAGE_ENDPOINT=http://127.0.0.1:10021/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:4231 go test -race -count=1 -tags integration ./integration/
+'''
+
+# The development stacks: compose.yml's PostgreSQL, Azurite, and NATS (db:) and its observability
+# profile (otel:), whose data lives in named volumes that each group's down keeps and its reset
+# drops. Each runs as the spike-graph project on [env]'s ports.
+[tasks."db:up"]
+description = "Build and start the compose PostgreSQL, Azurite, and NATS and wait until they are healthy"
+run = "docker compose up -d --wait --build"
+
+[tasks."db:down"]
+description = "Stop the compose PostgreSQL, Azurite, and NATS, keeping their volumes"
+run = "docker compose down"
+
+[tasks."db:reset"]
+description = "Stop the compose PostgreSQL, Azurite, and NATS and drop their volumes"
+run = "docker compose down -v"
+
+# `up` always starts the unprofiled services alongside an activated profile, so naming the five
+# services here keeps it from also starting the db: group. Mimir's HTTP endpoint answers ready
+# before its querier ring finishes joining (compose/README.md), and its image has no shell for a
+# HEALTHCHECK, so --wait alone does not cover it. Poll a synthetic query (no series to read, just
+# the query path itself) until it succeeds instead of trusting /ready.
+[tasks."otel:up"]
+description = "Build and start the observability profile (collector, Loki, Tempo, Mimir, Grafana) and wait for health"
+run = '''
+set -e
+docker compose --profile observability up -d --wait --build otel-collector loki tempo mimir grafana
+for i in $(seq 1 30); do
+  curl -sf "http://127.0.0.1:${MIMIR_PORT}/prometheus/api/v1/query?query=vector(1)" >/dev/null && exit 0
+  sleep 1
+done
+echo "mimir did not become queryable within 30s" >&2
+exit 1
+'''
+
+# `down` is project-wide by default; naming the five services here keeps it from also stopping
+# the services db:up started.
+[tasks."otel:down"]
+description = "Stop the observability profile (keep data)"
+run = "docker compose --profile observability down otel-collector loki tempo mimir grafana"
+
+[tasks."otel:reset"]
+description = "Stop the observability profile and drop its data"
+run = "docker compose --profile observability down -v otel-collector loki tempo mimir grafana"
+
+# The whole local stack, PostgreSQL, Azurite, and NATS and the observability profile together.
+# Neither half depends on the other, so mise runs each pair in parallel.
+[tasks."stack:up"]
+description = "Build and start PostgreSQL, Azurite, and NATS and the observability profile and wait for health"
+depends = ["db:up", "otel:up"]
+
+[tasks."stack:down"]
+description = "Stop PostgreSQL, Azurite, and NATS and the observability profile (keep data)"
+depends = ["db:down", "otel:down"]
+
+[tasks."stack:reset"]
+description = "Stop PostgreSQL, Azurite, and NATS and the observability profile and drop their data"
+depends = ["db:reset", "otel:reset"]
+
+# The running service does the work through its admin mount, confirmed as it requires: every
+# migration set reverted, the sets applied, the named state seeded.
+[tasks."db:state"]
+description = "Reset the running service's database to a named state"
+usage = 'arg "<state>" help="The state to reset to, one of GET /admin/database/states"'
+run = 'curl -sS --fail-with-body -H "Content-Type: application/json" -d "{\"state\":\"$usage_state\",\"confirm\":true}" http://127.0.0.1:${APP_SERVER_PORT}/admin/database/state && echo'

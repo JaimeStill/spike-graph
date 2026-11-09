@@ -4,7 +4,7 @@
 # its image and carries its configuration and, where the image can run a
 # probe, its health check. The named volumes keep the data across each group's down task
 # (`mise run db:down`, `otel:down`); its reset task drops them.
-name: go-web-service
+name: spike-graph
 
 include:
   - compose/postgres.yml
