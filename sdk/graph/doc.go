@@ -12,6 +12,10 @@
 //     empty one
 //   - [Graph.Define], which adds a node with its constructor and its
 //     options, and runs nothing
+//   - [Graph.Value], which adds a node whose value is a given value in
+//     every Build, and [Fresh], which adds a node whose value is a new zero
+//     pointer in each Build; both take no options and return a Node like
+//     Define's
 //   - [Option], which places a node at Define: [After], which orders it
 //     after nodes or groups without their values, and [In], which makes it
 //     a member of a group
@@ -43,7 +47,9 @@
 // they all receive its value. A node that is neither a root nor reached by
 // a Use is never constructed, so a Build of a subset of the roots brings up
 // only that subset's dependencies. Each Build is independent and constructs
-// fresh values.
+// fresh values: a [Graph.Value] node's value is the same v in every Build,
+// and a [Fresh] node's is a new zero pointer in each, so a value a run
+// mutates starts zero in the next System.
 //
 // # Order and groups
 //
@@ -80,7 +86,7 @@
 // Wiring mistakes panic with a "graph: " message, as each symbol's
 // documentation states: a dependency cycle, a node or group used on a
 // Graph it was not defined on, a Scope used after its constructor returned,
-// a recovered abort, a Define, Group, or Replace after Build, a Get of a
+// a recovered abort, a Define, Value, Fresh, Group, or Replace after Build, a Get of a
 // node not in the System, a nil constructor, option, or observer, a nil
 // ref given to After, In, or Build, and an empty or duplicate name, nodes
 // and groups sharing one name space. Define checks its options, for a nil

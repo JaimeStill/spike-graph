@@ -45,26 +45,54 @@ func erase[T any](ctor func(*Scope) (T, error)) func(*Scope) (any, error) {
 // or one defined on another Graph. It checks every option before it changes
 // g, so a Define that panics leaves g as it was.
 func (g *Graph) Define[T any](name string, ctor func(*Scope) (T, error), opts ...Option) *Node[T] {
+	return define(g, "Define", name, ctor, opts)
+}
+
+// Value defines a node named name whose value is v in every Build, and
+// returns its handle, a [Node] like any Define returns: a Use target, a
+// root, an [After] target, and replaceable. Every Build's value is v
+// itself, so a pointer or map v is shared across Builds. Value panics as
+// [Graph.Define] does: once g has run a Build, or when name is empty or
+// already defined on g, the message naming Value.
+func (g *Graph) Value[T any](name string, v T) *Node[T] {
+	return define(g, "Value", name, func(*Scope) (T, error) { return v, nil }, nil)
+}
+
+// Fresh defines a node named name on g whose value is a new zero *T in
+// each Build, and returns its handle, a [Node] like any Define returns. Two
+// Builds give two distinct pointers, so a value a run mutates, a readiness
+// flag or a gate, starts zero in every System. Fresh panics as
+// [Graph.Define] does: once g has run a Build, or when name is empty or
+// already defined on g, the message naming Fresh. It is a function, not a
+// method, as the design note writes it.
+func Fresh[T any](g *Graph, name string) *Node[*T] {
+	return define(g, "Fresh", name, func(*Scope) (*T, error) { return new(T), nil }, nil)
+}
+
+// define is Define, Value, and Fresh: it checks the name, the constructor,
+// and every option before it changes g, then adds the node. call names the
+// exported function for a panic's message.
+func define[T any](g *Graph, call, name string, ctor func(*Scope) (T, error), opts []Option) *Node[T] {
 	if g.built {
-		panic(fmt.Sprintf("graph: Define of %q after Build", name))
+		panic(fmt.Sprintf("graph: %s of %q after Build", call, name))
 	}
 	if name == "" {
-		panic("graph: Define with an empty name")
+		panic(fmt.Sprintf("graph: %s with an empty name", call))
 	}
 	if g.defined(name) {
-		panic(fmt.Sprintf("graph: Define of duplicate name %q", name))
+		panic(fmt.Sprintf("graph: %s of duplicate name %q", call, name))
 	}
 	if ctor == nil {
-		panic(fmt.Sprintf("graph: Define %q with a nil constructor", name))
+		panic(fmt.Sprintf("graph: %s %q with a nil constructor", call, name))
 	}
 	var set settings
 	for _, opt := range opts {
 		if opt == nil {
-			panic(fmt.Sprintf("graph: Define %q with a nil option", name))
+			panic(fmt.Sprintf("graph: %s %q with a nil option", call, name))
 		}
 		opt.apply(&set)
 	}
-	op := fmt.Sprintf("Define %q with ", name)
+	op := fmt.Sprintf("%s %q with ", call, name)
 	for _, r := range set.after {
 		g.resolve(r, op+"After")
 	}
