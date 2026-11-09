@@ -28,18 +28,18 @@ LOKI_PORT = "3110"
 TEMPO_PORT = "3210"
 MIMIR_PORT = "9019"
 GRAFANA_PORT = "3010"
-# The service's overrides of config.json and config.local.json, which name the default ports.
-# The integration harness reads the same variables; the integration task overrides the
-# database, store, and broker with its own stack's.
+# The service's overrides of config.json and config.local.json, which name the default ports,
+# each derived from the port above it reaches. The integration harness reads the same variables;
+# the integration task overrides the database, store, and broker with its own stack's.
 APP_SERVER_PORT = "8090"
-APP_DATABASE_PORT = "5440"
-APP_STORAGE_ENDPOINT = "http://127.0.0.1:10020/devstoreaccount1"
-APP_NATS_URL = "nats://127.0.0.1:4230"
-APP_OBSERVABILITY_ENDPOINT = "127.0.0.1:4327"
+APP_DATABASE_PORT = "{{env.POSTGRES_PORT}}"
+APP_STORAGE_ENDPOINT = "http://127.0.0.1:{{env.AZURITE_BLOB_PORT}}/devstoreaccount1"
+APP_NATS_URL = "nats://127.0.0.1:{{env.NATS_PORT}}"
+APP_OBSERVABILITY_ENDPOINT = "127.0.0.1:{{env.OTEL_GRPC_PORT}}"
 # slab's run settings, its defaults likewise the default ports.
-SLAB_BASE = "http://127.0.0.1:8090"
-SLAB_GRAFANA = "http://127.0.0.1:3010"
-SLAB_NATS = "nats://127.0.0.1:4230"
+SLAB_BASE = "http://127.0.0.1:{{env.APP_SERVER_PORT}}"
+SLAB_GRAFANA = "http://127.0.0.1:{{env.GRAFANA_PORT}}"
+SLAB_NATS = "{{env.APP_NATS_URL}}"
 
 # The one check: read-only and deterministic, stopping at the first failure. vet, fix, and lint
 # read the integration suite too (-tags integration); go test runs the unit tier only, the
@@ -125,7 +125,7 @@ set -e
 export COMPOSE_PROJECT_NAME=spike-graph-integration POSTGRES_PORT=5441 AZURITE_BLOB_PORT=10021 NATS_PORT=4231
 trap 'rc=$?; [ $rc -eq 0 ] || docker compose logs; docker compose down -v; exit $rc' EXIT
 docker compose up -d --wait --build
-APP_DATABASE_PORT=5441 APP_STORAGE_ENDPOINT=http://127.0.0.1:10021/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:4231 go test -race -count=1 -tags integration ./integration/
+APP_DATABASE_PORT=$POSTGRES_PORT APP_STORAGE_ENDPOINT=http://127.0.0.1:$AZURITE_BLOB_PORT/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:$NATS_PORT go test -race -count=1 -tags integration ./integration/
 '''
 
 # slab is its own module under tools/ so go-cli-sdk, x/term, and x/sys never enter cmd/server's
