@@ -10,6 +10,10 @@ type node struct {
 	index int
 	// ctor is the typed constructor, wrapped to return its value as any.
 	ctor func(*Scope) (any, error)
+	// after are the order-only targets [After] named at Define, nodes or
+	// groups. A Build expands a group to its members then, and drops the
+	// targets not in the System when it computes the layers.
+	after []Ref
 }
 
 // Node is one node of a [Graph], defined by [Graph.Define]: a name and a
@@ -19,13 +23,18 @@ type Node[T any] struct {
 	core *node
 }
 
-// Ref is any [Node], whatever its type: what [Graph.Build] takes as roots
-// and [Scope.After] as an ordering target, and what names a node without
-// its type. It is sealed; only *Node[T] implements it.
+// Ref is any [Node], whatever its type, or a [Group]: what [Graph.Build]
+// takes as roots and [After] as an ordering target, and what names a node
+// or group without its type. A group stands for its members wherever a Ref
+// is taken. It is sealed; only *Node[T] and *Group implement it.
 type Ref interface {
-	// Name returns the name the node was defined with.
+	// Name returns the name the node or group was defined with.
 	Name() string
-	ref() *node
+	// expand returns the Graph the ref was defined on, nil for a nil
+	// handle, and the nodes it stands for.
+	expand() (*Graph, []*node)
+	// kind names what the ref is, "node" or "group", for a panic message.
+	kind() string
 }
 
 func (n *Node[T]) ref() *node {
@@ -34,6 +43,15 @@ func (n *Node[T]) ref() *node {
 	}
 	return n.core
 }
+
+func (n *Node[T]) expand() (*Graph, []*node) {
+	if n == nil {
+		return nil, nil
+	}
+	return n.core.graph, []*node{n.core}
+}
+
+func (*Node[T]) kind() string { return "node" }
 
 // Name returns the name the node was defined with.
 func (n *Node[T]) Name() string { return n.core.name }

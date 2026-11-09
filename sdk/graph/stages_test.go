@@ -48,15 +48,13 @@ func newWebService() *webService {
 	// Reactors: the sweeper over the pool, once the schema is verified;
 	// it takes nothing from the schema, so the edge is order-only.
 	w.reactors = g.Define("reactors", func(s *graph.Scope) (string, error) {
-		s.After(w.schema)
 		return "sweeper(" + s.Use(w.database) + ")", nil
-	})
+	}, graph.After(w.schema))
 	// The request edge: the server over the domain and admin pieces, started after
 	// the reactors and drained before them.
 	w.server = g.Define("server", func(s *graph.Scope) (string, error) {
-		s.After(w.reactors)
 		return "server(" + s.Use(w.domain) + "," + s.Use(w.schema) + "," + s.Use(w.storage) + ")", nil
-	})
+	}, graph.After(w.reactors))
 	return w
 }
 

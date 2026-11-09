@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // System is what one [Graph.Build] constructed: every node the roots
@@ -38,7 +39,7 @@ func (s *System) Get[T any](n *Node[T]) T {
 
 // Layers returns the System's nodes in layers, layer 0 first: a node
 // with no dependencies is in layer 0, and any other node is one layer
-// above the highest of its Use and After dependencies in the System, so
+// above the highest of its Use and [After] dependencies in the System, so
 // every node's dependencies sit in layers below it. Within a layer, nodes
 // are in definition order. Each call returns a fresh copy.
 func (s *System) Layers() [][]Dependency {
@@ -57,33 +58,47 @@ func (s *System) Layers() [][]Dependency {
 
 // system computes the layers of b's entries by longest path and returns
 // them as a System. The Use edges are acyclic, since construct panics on a
-// cycle, but an After edge can close one; that panics with its path here.
+// cycle, but an After edge can close one; that panics with its path here,
+// which names a group the cycle passes through between its member and the
+// node ordered after it.
 func (b *build) system() *System {
 	level := make(map[*node]int, len(b.entries))
-	visiting := make(map[*node]bool)
-	var path []*node
+	// path is the chain of names being visited, outermost first, groups
+	// included; onPath holds each visiting node's place in it.
+	var path []string
+	onPath := make(map[*node]int)
 	var layer func(n *node) int
 	layer = func(n *node) int {
 		if l, ok := level[n]; ok {
 			return l
 		}
-		if visiting[n] {
-			panic("graph: dependency cycle: " + cyclePath(path, n))
+		if i, ok := onPath[n]; ok {
+			panic("graph: dependency cycle: " + strings.Join(append(slices.Clone(path[i:]), n.name), " -> "))
 		}
-		visiting[n] = true
-		path = append(path, n)
+		onPath[n] = len(path)
+		path = append(path, n.name)
 		e := b.entries[n]
 		l := 0
 		for _, d := range e.uses {
 			l = max(l, layer(d)+1)
 		}
-		for _, d := range e.after {
-			if _, ok := b.entries[d]; ok {
-				l = max(l, layer(d)+1)
+		for _, r := range n.after {
+			grp, isGroup := r.(*Group)
+			if isGroup {
+				path = append(path, grp.name)
+			}
+			_, targets := r.expand()
+			for _, d := range targets {
+				if _, ok := b.entries[d]; ok {
+					l = max(l, layer(d)+1)
+				}
+			}
+			if isGroup {
+				path = path[:len(path)-1]
 			}
 		}
 		path = path[:len(path)-1]
-		visiting[n] = false
+		delete(onPath, n)
 		level[n] = l
 		return l
 	}

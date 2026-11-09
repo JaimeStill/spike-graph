@@ -10,19 +10,24 @@
 //
 //   - [Graph], the description of the nodes, and [New], which returns an
 //     empty one
-//   - [Graph.Define], which adds a node with its constructor and runs
-//     nothing
+//   - [Graph.Define], which adds a node with its constructor and its
+//     options, and runs nothing
+//   - [Option], which places a node at Define: [After], which orders it
+//     after nodes or groups without their values, and [In], which makes it
+//     a member of a group
+//   - [Graph.Group], which defines a [Group], a named set of nodes, and
+//     [Group.Name], its name
 //   - [Graph.Replace], which swaps a node's constructor before Build, for a
-//     test's substitute
+//     test's substitute, keeping its options
 //   - [Graph.Observe], which adds a function a Build calls with each node's
 //     name as it begins to construct it, for tracing what a Build reaches
 //   - [Graph.Build], which constructs what the roots reach into a System
 //   - [Node], a typed handle on one node, and [Node.Name], its name
-//   - [Ref], any Node whatever its type, sealed to Node, and its Name
+//   - [Ref], any Node whatever its type or a Group, sealed to the two, and
+//     its Name
 //   - [Scope], what a constructor receives
 //   - [Scope.Use], which returns a dependency's value, building it if
 //     needed
-//   - [Scope.After], which orders the node after another without its value
 //   - [System], what one Build constructed
 //   - [System.Get], which returns a node's value
 //   - [System.Layers], which returns the built nodes in layers
@@ -40,14 +45,24 @@
 // only that subset's dependencies. Each Build is independent and constructs
 // fresh values.
 //
-// [Scope.After] adds an order-only edge: it passes no value and builds
-// nothing, and holds only when its target is in the System by some other
-// path.
+// # Order and groups
+//
+// A node's order-only edges are declared at Define, beside its name, and
+// not in its constructor: [After] orders the node after each ref it names.
+// An order-only edge passes no value and builds nothing, and holds only
+// when its target is in the System by some other path, so a node only
+// ordered against is named as a root. [Graph.Group] defines a [Group], and
+// [In] makes a node its member. A group is a [Ref] that stands for its
+// members: a Build given a group as a root builds every member, in
+// definition order, and After of a group orders after each member in the
+// System. The membership is complete by the first Build, since Define
+// panics after it, so a node may order after a group whose members are
+// defined later; an empty group builds and orders nothing.
 //
 // # Layers
 //
-// The layers are the longest-path layering of the discovered Use and After
-// edges, as [System.Layers] states: every node's dependencies sit in lower
+// The layers are the longest-path layering of the discovered Use edges
+// and the declared After edges, as [System.Layers] states: every node's dependencies sit in lower
 // layers, so the nodes of one layer can start together once the layers
 // below them have.
 //
@@ -63,11 +78,15 @@
 // lose the failure, so Build panics naming the constructor and the Use.
 //
 // Wiring mistakes panic with a "graph: " message, as each symbol's
-// documentation states: a dependency cycle, a node used on a Graph it was
-// not defined on, a Scope used after its constructor returned, a recovered
-// abort, a Define or Replace after Build, a Get of a node not in the
-// System, a nil constructor or observer, and an empty or duplicate name.
-// Build checks its roots, for a nil node or one defined on another Graph,
-// before it constructs any of them, so a mistake in any root panics before
-// a constructor runs.
+// documentation states: a dependency cycle, a node or group used on a
+// Graph it was not defined on, a Scope used after its constructor returned,
+// a recovered abort, a Define, Group, or Replace after Build, a Get of a
+// node not in the System, a nil constructor, option, or observer, a nil
+// ref given to After, In, or Build, and an empty or duplicate name, nodes
+// and groups sharing one name space. Define checks its options, for a nil
+// ref or one defined on another Graph, before it changes the Graph. A cycle
+// closed by an order-only edge, through a group included, panics at Build
+// with its path. Build checks its roots, for a nil ref or one defined on
+// another Graph, before it constructs any of them, so a mistake in any root
+// panics before a constructor runs.
 package graph
