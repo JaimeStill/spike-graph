@@ -44,8 +44,8 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
    `After` (`Dropped()` is empty).
 6. A fixture name check replaces the `// "name"` comments, with its rule settled.
 7. How a `*Nodes` method reaches a plain New argument (the logger's `io.Writer`) is settled.
-8. One tier is written both as `*Nodes` methods and with arity adapters, with a verdict on
-   whether adapters ship.
+8. A verdict on whether arity adapters ship. The plan was to write one tier both as `*Nodes`
+   methods and with arity adapters; the architect decided without it (The answer, 8).
 9. A before/after table for each root, from the diff against the baseline commit: lines,
    closures, wrapper constructors, name comments, and ordering sites, with decisions 9–14 each
    marked kept, changed, or dropped.
@@ -85,12 +85,16 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
   `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and
   slab's settings, so the copied files keep go-web-service's defaults; run the service and slab
   through `mise run`.
+- **The measurement.** `mise run measure` runs `tools/measure`, which parses each composition
+  root's production files and its `graph_test.go` at the baseline commit (2999659) and in the
+  working tree, and prints a before/after table for each root. It reads the baseline through git,
+  leaving the checkout untouched. Its `count` package defines each column.
 
 ## The path
 
 The sub-goal's tasks, in order: `baseline` (the copies and the stack, green on go-core v0.10.0),
-`candidate` (evidence 1), `web` (2, 3, 5, 6, 7), `cli` (4), and `adapters` (8, 9), which gives
-the answer.
+`candidate` (evidence 1), `web` (2, 3, 5, 6, 7), `cli` (4), and `adapters` (8, and 9 through
+`mise run measure`), which gives the answer.
 
 ## The answer
 
@@ -154,14 +158,15 @@ wrapper constructors, closures, and name comments gone; arity adapters don't shi
    | layer tests, code lines | 0 | 89 | +89 |
    | layer tests, raw lines | 0 | 140 | +140 |
 
-   Each table counts production files only. Code lines exclude blank, comment, and import lines
-   and doc.go. Raw lines barely move because the doc comments were rewritten to the spike's
-   standards. The layer tests are their own row and grew on purpose: handles, the layer table
-   printed on failure, and the Dropped guard; slab's layer test is new. slab's remaining wrapper
-   is `flags.setting`, which returns a constructor as Sketch 2 proposes. Its 7 remaining closures
-   are that constructor; `env`, the local helper `bindRootFlags` names each flag's variable with;
-   `preRun`'s `VisitAll` callback; and four callbacks the CLI takes: the root's `Footer`,
-   `version`'s `Run`, and `outputSource`'s `New` with the color check nested in it.
+   The rows above the layer tests count each root's production files, leaving out doc.go. Code
+   lines exclude blank, comment, and import lines. Raw lines barely move because the doc comments
+   were rewritten to the spike's standards. The layer tests, each root's `graph_test.go`, grew on
+   purpose: they gained handles, the layer table printed on failure, and the Dropped guard, and
+   slab's layer test is new. slab's remaining wrapper is `flags.setting`, which returns a
+   constructor as Sketch 2 proposes. slab's 7 remaining closures are that constructor; `env`, a
+   local helper `bindRootFlags` uses to name each flag's variable; `preRun`'s `VisitAll`
+   callback; and four callbacks the CLI takes: the root's `Footer`, `version`'s `Run`, and
+   `outputSource`'s `New` with the color check nested in it.
 
 ### Decisions 9–14
 

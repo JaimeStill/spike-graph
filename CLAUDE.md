@@ -7,7 +7,8 @@ real infrastructure. The repository is managed with the marathon workflow; start
 
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
 - **Check:** `mise run check` (hermetic). `mise run integration` runs the integration tier on its
-  own compose stack; `mise.toml` defines the stack, serve, and slab tasks.
+  own compose stack; `mise run measure` prints the composition roots' before/after tables;
+  `mise.toml` defines the stack, serve, and slab tasks.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.graph.spike-graph`. Its goal record is
   `context/goals/experiment.graph.spike-graph.md`.

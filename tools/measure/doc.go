@@ -4,7 +4,7 @@
 // lines of the root's production files and the graph shapes they write,
 // and the code and raw lines of its layer tests.
 //
-// The baseline is read from git (ls-tree and show), so the checkout and the
-// working tree are never touched. measure runs from anywhere in the
-// repository: `mise run measure`.
+// measure reads the baseline from git (ls-tree and show), so the checkout
+// and the working tree are never touched. Run it with `mise run measure`,
+// from anywhere in the repository.
 package main
