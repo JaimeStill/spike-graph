@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-// Module is the module path the repository root's go.mod declares. slab is
-// its own module under tools/, so the walk up from it passes tools/slab's
-// go.mod, whose module line is a different path, and stops at the root's.
+// Module is the module path the repository root's go.mod declares. The walk
+// up from a directory stops at the first go.mod whose module line is this
+// path, passing over any nested module that declares another.
 const Module = "github.com/JaimeStill/spike-graph"
 
 // ErrNotFound reports that no directory on the walk declares Module.

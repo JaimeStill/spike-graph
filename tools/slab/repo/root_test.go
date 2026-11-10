@@ -12,7 +12,8 @@ import (
 )
 
 // tree builds a fake checkout: the root's go.mod declaring the module, and a
-// nested tools/slab module declaring its own path, as the real one does.
+// nested module under tools/slab declaring another path, which the walk to
+// the root has to pass over.
 func tree(t *testing.T) (root, nested string) {
 	t.Helper()
 	root = t.TempDir()
@@ -88,7 +89,7 @@ func TestRoot_RejectsAnOverrideThatIsNotTheRoot(t *testing.T) {
 		t.Errorf("Root accepted --repo %s, which declares no go.mod", nested)
 	}
 	if _, err := repo.Root(filepath.Join(nested, "..", "..")); err == nil {
-		t.Error("Root accepted --repo tools/slab, whose go.mod declares another module")
+		t.Error("Root accepted --repo at the nested module, whose go.mod declares another module")
 	}
 }
 
