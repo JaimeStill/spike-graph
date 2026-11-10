@@ -1,6 +1,6 @@
 # goal · experiment.graph.spike-graph
 
-- **State:** brief ready
+- **State:** building
 - **Task:** candidate
 - **Branch:** candidate
 
@@ -31,9 +31,11 @@ Behaviors     1. Define takes options. graph.After(refs...) orders the node afte
                  builds and orders nothing.
               3. Scope has Use only; Scope.After is gone.
               4. g.Value(name, v) defines a node whose value is v in every Build.
-              5. graph.Fresh[T](g, name) defines a node whose value is a new zero *T
-                 in each Build: two Builds give two distinct pointers. Value and Fresh
-                 take no options, as the note writes them.
+              5. g.Value(name, v, opts...) and g.Fresh[T](name, opts...) take the
+                 same options as Define. Fresh is a method; its node's value is a new
+                 zero *T in each Build, so two Builds give two distinct pointers.
+                 Value's doc says a lifecycle participant or a Readiness belongs in
+                 Fresh or Define, since Value hands every Build the same value.
               6. Dependency is {Name, Value, Ref}. Ref equals the handle Define,
                  Value, or Fresh returned.
               7. Observe(func(Ref)) fires exactly when it does today: once for each
@@ -64,6 +66,14 @@ Behaviors     1. Define takes options. graph.After(refs...) orders the node afte
               14. The candidates live under sdk/ as sdk/graph and sdk/lifecycle. The
                   roots are untouched and still on go-core v0.10.0, and
                   `mise run check` passes.
+              15. System.Dropped() reports each After that orders nothing in the
+                  System: a node target not in it, or a group with no member in it,
+                  as the declaring node's and the target's handles. A full build
+                  reports none.
+              16. A zero-value Node or Group literal given to After, In, Build, or
+                  LayerOf panics with a "graph: " message. A nil After or In ref's
+                  message says its Define may come later. lifecycle.New panics when
+                  a node's value is go-core's *Readiness, which it can't bind.
 Test seams    The candidate graph's exported API (Graph, Node, Group, Scope, System),
               and the forked lifecycle's New over a System the candidate graph built.
 Slices        (no upgrade slice: spike-graph is current; go-core is held)
@@ -77,17 +87,21 @@ Slices        (no upgrade slice: spike-graph is current; go-core is held)
                  aliasing the rest; go-core's lifecycle tests ported and passing,
                  plus a compile-time check that the forked Coordinator and Readiness
                  are go-web-sdk Doctors.
+              6. Options on Value and Fresh; Fresh as a method (Fable review).
+              7. System.Dropped() (Fable review).
+              8. Zero-literal handles, the nil-After hint, and the go-core Readiness
+                 guard (Fable review).
 Out of scope  Migrating the composition root and its layer tests, web.Run, the name
               check, and how a *Nodes method reaches a plain value (web); the cli fork
-              and slab (cli); arity adapters and the measurements (adapters); options
-              on Value and Fresh; any change to go-core or to the copied sdk package.
+              and slab (cli); arity adapters and the measurements (adapters);
+              any change to go-core or to the copied sdk package.
 Door          two-way: new packages in the spike repository that nothing imports yet;
               no release.
 ```
 
 ## Progress
 
-slices 5/5 committed · standards ✓ · spec ✓ · editor ✓
+slices 5/8 committed · standards — · spec — · editor — (redirected by the Fable review; slices 6–8 added)
 
 ## Decisions
 
@@ -125,9 +139,14 @@ slices 5/5 committed · standards ✓ · spec ✓ · editor ✓
 - candidate: String prints `N: a, b` per layer with no trailing newline; the empty System prints "".
 - candidate: LayerOf also panics for a nil ref.
 - candidate: sdk/lifecycle's aliases live in one alias.go; the forked files keep go-core's names.
-- candidate: noted for adapters: the design note makes Value a method but Fresh a package function, though Go 1.27 allows g.Fresh[T](name); a finding for the answer.
+- candidate: Fable review: Value and Fresh take Define's options and Fresh is a method, g.Fresh[T](name); a participant must be able to join a group, and changing it after release is a breaking change.
+- candidate: Fable review: After stays soft for subset builds; System.Dropped() exposes the Afters that order nothing.
+- candidate: Fable review: zero-literal handles panic with "graph: ", the nil-After message hints a later Define, and lifecycle.New rejects go-core's *Readiness.
+- candidate: noted for web: After needs a handle defined earlier; telemetry is defined after database, so the root defines telemetry first or forward-declares a group; the root's layer test asserts Dropped() is empty for the full root set.
+- candidate: noted for intake: concurrent Builds race on Graph.built (documented, as in go-core); Replace can't remove an edge or membership; no Group.Members(); String is ambiguous for names with ", "; an observer's panic escapes Build.
 
 ## Pending edits
 
 - coordinator · experiment.graph intake: plan go-web-service's dependency upgrades to the versions spike-graph adopted in its baseline.
 - coordinator · roadmap: spike-graph's summary says lifecycle forks Coordinator, New, and Readiness, and the forks live under sdk/.
+
