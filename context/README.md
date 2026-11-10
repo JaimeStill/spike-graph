@@ -25,11 +25,11 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
 ## The evidence
 
 1. A candidate `graph` package, forked from go-core v0.10.0, implements `graph.After` and
-   `graph.In` at Define, groups a Build expands, `g.Value`, `graph.Fresh`, `Ref` on Dependency,
-   `Observe(func(Ref))`, `LayerOf`, and `String`, with `Scope.After` removed; go-core's graph and
-   lifecycle tests, ported, pass: edges discovered through Use, build-once, longest-path layers,
-   panics for wiring mistakes, the participation interfaces, and startup, readiness, and
-   shutdown.
+   `graph.In` at Define, groups a Build expands, `g.Value` and `g.Fresh` with Define's options,
+   `Ref` on Dependency, `Observe(func(Ref))`, `LayerOf`, `String`, and `Dropped`, with
+   `Scope.After` removed; go-core's graph and lifecycle tests, ported, pass: edges discovered
+   through Use, build-once, longest-path layers, panics for wiring mistakes, the participation
+   interfaces, and startup, readiness, and shutdown.
 2. go-web-service's whole service runs on the candidate: its composition root migrated, every
    node's layer stated at its Define line and no constructor body ordering anything; its unit
    tests, and its integration tests against the spike's Postgres, Azurite, NATS, and otel stack,
@@ -40,7 +40,8 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
    sides; help and usage errors build nothing; its scenarios run against the migrated service on
    the stack.
 5. The layer tests are rewritten on `Roots()`, `LayerOf`, and handles: `buildAsRun`, `layerOf`,
-   and `names` are gone, and a failing test prints the layer table.
+   and `names` are gone, a failing test prints the layer table, and the full root set drops no
+   `After` (`Dropped()` is empty).
 6. A fixture name check replaces the `// "name"` comments, with its rule settled.
 7. How a `*Nodes` method reaches a plain New argument (the logger's `io.Writer`) is settled.
 8. One tier is written both as `*Nodes` methods and with arity adapters, with a verdict on

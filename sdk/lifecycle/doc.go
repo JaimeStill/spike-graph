@@ -16,8 +16,8 @@
 //     are go-web-sdk's Doctor, since [Coordinator.Checks] returns go-core's
 //     Check
 //
-// The behavior is go-core v0.10.0's throughout; what follows is its
-// documentation.
+// The behavior is go-core v0.10.0's throughout, except that New panics on
+// go-core's *lifecycle.Readiness; what follows is its documentation.
 //
 // The package exports:
 //

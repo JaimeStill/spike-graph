@@ -101,7 +101,7 @@ Door          two-way: new packages in the spike repository that nothing imports
 
 ## Progress
 
-slices 8/8 committed · standards ✓ · spec ✓ · editor —
+slices 8/8 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
@@ -142,6 +142,11 @@ slices 8/8 committed · standards ✓ · spec ✓ · editor —
 - candidate: Fable review: Value and Fresh take Define's options and Fresh is a method, g.Fresh[T](name); a participant must be able to join a group, and changing it after release is a breaking change.
 - candidate: Fable review: After stays soft for subset builds; System.Dropped() exposes the Afters that order nothing.
 - candidate: Fable review: zero-literal handles panic with "graph: ", the nil-After message hints a later Define, and lifecycle.New rejects go-core's *Readiness.
+- candidate: System.Get of a nil *Node panics "graph: Get of a nil node"; v0.10.0 said `Get of "<nil>", a node not in the System`.
+- candidate: Replace of a nil or zero-value handle panics with a "graph: " message, checked before the after-Build check; v0.10.0 crashed on a nil dereference.
+- candidate: Name() on a nil or zero-value handle returns ""; v0.10.0 crashed.
+- candidate: the later-Define hint appears only in the panics for Define's, Value's, and Fresh's options, and asks "is its Group later?" for a group.
+- candidate: Dropped checks only the After refs of built nodes, in definition order and then declaration order; String doesn't show drops.
 - candidate: noted for web: After needs a handle defined earlier; telemetry is defined after database, so the root defines telemetry first or forward-declares a group; the root's layer test asserts Dropped() is empty for the full root set.
 - candidate: noted for intake: concurrent Builds race on Graph.built (documented, as in go-core); Replace can't remove an edge or membership; no Group.Members(); String is ambiguous for names with ", "; an observer's panic escapes Build.
 
