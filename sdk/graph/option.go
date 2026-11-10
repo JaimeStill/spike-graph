@@ -26,7 +26,8 @@ func (o inOption) apply(s *settings) { s.in = append(s.in, o.group) }
 // before it. A group stands for each of its members. After passes no value
 // and never builds a ref; the edge holds only when the ref's node is in the
 // System, as a root or a node some Use reached, and is dropped otherwise,
-// so a node only ordered against is named as a root. Define, Value, and
+// as [System.Dropped] reports, so a node only ordered against is named as
+// a root. Define, Value, and
 // Fresh panic when a ref is nil or was defined on another Graph.
 func After(refs ...Ref) Option {
 	return afterOption(refs)

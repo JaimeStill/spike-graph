@@ -12,6 +12,17 @@ import (
 type System struct {
 	entries map[*node]*entry
 	layers  [][]*entry
+	dropped []Drop
+}
+
+// Drop is one [After] that orders nothing in a [System]: Node declared it,
+// and After is its target as declared, a node not in the System or a
+// [Group] with no member in it. Both are the handles [Graph.Define],
+// [Graph.Value], [Graph.Fresh], or [Graph.Group] returned, so
+// d.Node == graph.Ref(handle) holds.
+type Drop struct {
+	Node  Ref
+	After Ref
 }
 
 // Dependency is one built node: its name, its constructed value, and its
@@ -60,6 +71,20 @@ func (s *System) Layers() [][]Dependency {
 		}
 	}
 	return out
+}
+
+// Dropped returns each [After] that orders nothing in s, which Build drops
+// silently so that a Build of a subset of the roots works: a node target
+// not in s, or a group target with no member in s. A group with at least
+// one member in s orders after that member and is not dropped, even when
+// other members are absent. Only the Afters of nodes in s are considered.
+// The drops are in the declaring nodes' definition order, then in the
+// order of each node's After refs. A Build of the full root set drops
+// nothing, so a root's layer test asserts len(sys.Dropped()) == 0 to make
+// a forgotten root, or a forgotten [In], fail instead of silently losing
+// an order. Each call returns a fresh copy; nil when nothing is dropped.
+func (s *System) Dropped() []Drop {
+	return slices.Clone(s.dropped)
 }
 
 // LayerOf returns the layer of ref's node in s, numbered as
@@ -174,5 +199,21 @@ func (b *build) system() *System {
 		}
 		layers[l] = append(layers[l], e)
 	}
-	return &System{entries: b.entries, layers: layers}
+	return &System{entries: b.entries, layers: layers, dropped: b.dropped(ordered)}
+}
+
+// dropped returns the Afters of the ordered entries whose targets have no
+// node among b's entries, in the entries' order and then each node's After
+// order.
+func (b *build) dropped(ordered []*entry) []Drop {
+	var drops []Drop
+	for _, e := range ordered {
+		for _, r := range e.node.after {
+			_, targets := r.expand()
+			if !slices.ContainsFunc(targets, func(d *node) bool { _, ok := b.entries[d]; return ok }) {
+				drops = append(drops, Drop{Node: e.node.handle, After: r})
+			}
+		}
+	}
+	return drops
 }

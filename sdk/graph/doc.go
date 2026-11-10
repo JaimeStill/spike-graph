@@ -36,9 +36,13 @@
 //   - [System.Get], which returns a node's value
 //   - [System.Layers], which returns the built nodes in layers
 //   - [System.LayerOf], which returns one node's layer
+//   - [System.Dropped], which reports each [After] that orders nothing in
+//     the System, as a [Drop]
 //   - [System.String], which prints the layer table, one line per layer,
 //     for a failing test's message
 //   - [Dependency], one built node: its name, value, and handle
+//   - [Drop], one dropped After: the declaring node's handle and its
+//     target's
 //
 // # Discovery
 //
@@ -84,7 +88,11 @@
 // [System.LayerOf] takes one and returns the node's layer, numbered as
 // Layers numbers them. [System.String] prints the layer table, a line such
 // as "1: cache, db" per layer, so a failing test can show the whole
-// layering.
+// layering. [System.Dropped] reports each After the Build dropped because
+// its target, a node or every member of a group, is not in the System, so
+// a root's layer test asserts that a Build of the full root set drops
+// nothing, and a forgotten root or [In] fails the test instead of
+// silently losing an order.
 //
 // # Errors and panics
 //
