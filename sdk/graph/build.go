@@ -70,7 +70,7 @@ func (g *Graph) Build(roots ...Ref) (sys *System, err error) {
 	// members, complete since Define panics after the first Build.
 	var nodes []*node
 	for _, r := range roots {
-		nodes = append(nodes, g.resolve(r, "Build")...)
+		nodes = append(nodes, g.resolve(r, "Build", false)...)
 	}
 	for _, n := range nodes {
 		if err := b.construct(n); err != nil {

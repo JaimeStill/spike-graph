@@ -37,17 +37,17 @@ type Dependency struct {
 	Ref Ref
 }
 
-// Get returns n's value in s. It panics when n is not in s: a node the
-// roots did not reach, or one defined on another Graph.
+// Get returns n's value in s. It panics when n is nil or a zero-value
+// literal, or not in s: a node the roots did not reach, or one defined on
+// another Graph.
 func (s *System) Get[T any](n *Node[T]) T {
 	core := n.ref()
+	if core == nil {
+		panic("graph: Get of a nil node")
+	}
 	e, ok := s.entries[core]
 	if !ok {
-		name := "<nil>"
-		if core != nil {
-			name = core.name
-		}
-		panic(fmt.Sprintf("graph: Get of %q, a node not in the System", name))
+		panic(fmt.Sprintf("graph: Get of %q, a node not in the System", core.name))
 	}
 	v, _ := e.value.(T)
 	return v
@@ -89,8 +89,9 @@ func (s *System) Dropped() []Drop {
 
 // LayerOf returns the layer of ref's node in s, numbered as
 // [System.Layers] numbers them, layer 0 first. It panics when ref is a nil
-// node, a node not in s (one the roots did not reach, or one defined on
-// another Graph), or a [Group], which has no layer of its own.
+// node or group, or a zero-value literal of one; a node not in s (one the
+// roots did not reach, or one defined on another Graph); or a [Group],
+// which has no layer of its own.
 func (s *System) LayerOf(ref Ref) int {
 	if ref == nil {
 		panic("graph: LayerOf of a nil node")

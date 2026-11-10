@@ -10,6 +10,7 @@ import (
 	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 	"github.com/standards-lab/go-core/config"
+	corelifecycle "github.com/standards-lab/go-core/lifecycle"
 )
 
 var _ lifecycle.ReadinessChecker = (*lifecycle.Readiness)(nil)
@@ -257,4 +258,32 @@ func TestNew_PanicsOnAReadinessBoundTwice(t *testing.T) {
 	mustPanic(t, `lifecycle: New: Readiness "readiness" is bound to another Coordinator`, func() {
 		lifecycle.New(second, cfg)
 	})
+}
+
+// go-core's Readiness binds only to go-core's Coordinator: New panics on
+// one, naming its node, rather than leave it reporting not ready forever.
+// It panics before it binds anything, so this package's Readiness in the
+// same System, a layer below, stays free for another New.
+func TestNew_PanicsOnGoCoresReadiness(t *testing.T) {
+	shared := new(lifecycle.Readiness)
+	g := graph.New()
+	ours := g.Define("ours", func(*graph.Scope) (*lifecycle.Readiness, error) { return shared, nil })
+	theirs := g.Fresh[corelifecycle.Readiness]("theirs", graph.After(ours))
+	cfg := lifecycle.Config{ShutdownTimeout: config.Duration(time.Second)}
+
+	sys, err := g.Build(theirs, ours)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	mustPanic(t, `lifecycle: New: Readiness "theirs" is go-core's, which this Coordinator cannot bind; use this package's Readiness`, func() {
+		lifecycle.New(sys, cfg)
+	})
+
+	// Had the panicking New bound shared, a New over a System holding it
+	// would panic as bound to another Coordinator.
+	alone, err := g.Build(ours)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	lifecycle.New(alone, cfg)
 }

@@ -94,12 +94,15 @@ func define[T any](g *Graph, call, name string, ctor func(*Scope) (T, error), op
 		}
 		opt.apply(&set)
 	}
+	// After and In take a handle already defined, so a nil one most often
+	// names a node or group whose Define or Group comes later; the message
+	// asks.
 	op := fmt.Sprintf("%s %q with ", call, name)
 	for _, r := range set.after {
-		g.resolve(r, op+"After")
+		g.resolve(r, op+"After", true)
 	}
 	for _, grp := range set.in {
-		g.resolve(grp, op+"In")
+		g.resolve(grp, op+"In", true)
 	}
 
 	core := &node{graph: g, name: name, index: len(g.nodes), ctor: erase(ctor), after: set.after}
@@ -121,18 +124,31 @@ func (g *Graph) defined(name string) bool {
 }
 
 // resolve returns the nodes r stands for on g: a node itself, or a group's
-// members in definition order. It panics when r is nil or defined on
-// another Graph; op names the call for the message.
-func (g *Graph) resolve(r Ref, op string) []*node {
-	if r == nil {
-		panic(fmt.Sprintf("graph: %s of a nil node", op))
+// members in definition order. It panics when r is nil, a zero-value
+// literal, or defined on another Graph; op names the call for the message.
+// When later is set, a nil ref's message asks whether the ref's Define, or
+// a group's Group, comes later, as it does for an option at Define.
+func (g *Graph) resolve(r Ref, op string, later bool) []*node {
+	kind := "node"
+	var owner *Graph
+	var nodes []*node
+	if r != nil {
+		kind = r.kind()
+		owner, nodes = r.expand()
 	}
-	owner, nodes := r.expand()
 	if owner == nil {
-		panic(fmt.Sprintf("graph: %s of a nil %s", op, r.kind()))
+		msg := fmt.Sprintf("graph: %s of a nil %s", op, kind)
+		if later {
+			maker := "Define"
+			if kind == "group" {
+				maker = "Group"
+			}
+			msg += fmt.Sprintf(" (is its %s later?)", maker)
+		}
+		panic(msg)
 	}
 	if owner != g {
-		panic(fmt.Sprintf("graph: %s of %q, a %s defined on another Graph", op, r.Name(), r.kind()))
+		panic(fmt.Sprintf("graph: %s of %q, a %s defined on another Graph", op, r.Name(), kind))
 	}
 	return nodes
 }
@@ -140,9 +156,12 @@ func (g *Graph) resolve(r Ref, op string) []*node {
 // Replace swaps n's constructor for ctor, which every later Build runs in
 // its place exactly as it would a defined one. It swaps only the
 // constructor: n keeps the [After] and [In] it was defined with. Replace
-// panics once g has run a Build, when n was defined on another Graph, or
-// when ctor is nil.
+// panics once g has run a Build, when n was defined on another Graph,
+// when n is nil or a zero-value literal, or when ctor is nil.
 func (g *Graph) Replace[T any](n *Node[T], ctor func(*Scope) (T, error)) {
+	if n.ref() == nil {
+		panic("graph: Replace of a nil node")
+	}
 	if g.built {
 		panic(fmt.Sprintf("graph: Replace of %q after Build", n.core.name))
 	}

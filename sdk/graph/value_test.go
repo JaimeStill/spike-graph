@@ -200,7 +200,7 @@ func TestValueAndFresh_OptionPanics(t *testing.T) {
 	for _, c := range calls {
 		t.Run(c.call, func(t *testing.T) {
 			t.Run("after of a nil ref", func(t *testing.T) {
-				mustPanic(t, c.call+` "top" with After of a nil node`, func() {
+				mustPanic(t, c.call+` "top" with After of a nil node (is its Define later?)`, func() {
 					c.define(graph.New(), graph.After(nil))
 				})
 			})
@@ -212,7 +212,7 @@ func TestValueAndFresh_OptionPanics(t *testing.T) {
 				})
 			})
 			t.Run("in a nil group", func(t *testing.T) {
-				mustPanic(t, c.call+` "top" with In of a nil group`, func() {
+				mustPanic(t, c.call+` "top" with In of a nil group (is its Group later?)`, func() {
 					c.define(graph.New(), graph.In(nil))
 				})
 			})
@@ -231,7 +231,7 @@ func TestValueAndFresh_OptionPanics(t *testing.T) {
 			t.Run("a panicking call changes nothing", func(t *testing.T) {
 				g := graph.New()
 				workers := g.Group("workers")
-				mustPanic(t, c.call+` "top" with After of a nil node`, func() {
+				mustPanic(t, c.call+` "top" with After of a nil node (is its Define later?)`, func() {
 					c.define(g, graph.In(workers), graph.After(nil))
 				})
 				// The name is still free, and the group gained no member.

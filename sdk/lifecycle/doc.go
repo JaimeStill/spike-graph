@@ -56,8 +56,10 @@
 // drives the whole sequence and returns one joined error. Registration is
 // legal only before that call, and the call is legal exactly once. Each
 // violation panics, as does [New] on a nil System, a ShutdownTimeout that
-// is not positive, or a [Readiness] already bound to another Coordinator:
-// they are wiring mistakes, not runtime conditions.
+// is not positive, a [Readiness] already bound to another Coordinator, or
+// a node whose value is go-core's *lifecycle.Readiness, which this
+// Coordinator cannot bind: they are wiring mistakes, not runtime
+// conditions.
 //
 // # Participation
 //
@@ -121,7 +123,10 @@
 // Readiness reports that Coordinator's Ready and Checks, and is not among
 // them. An unbound Readiness is not ready and has no checks. A Readiness
 // binds once, so a node whose constructor returns one shared Readiness
-// across two Builds, each given to a New, panics in the second.
+// across two Builds, each given to a New, panics in the second. A node
+// whose value is go-core's *lifecycle.Readiness instead panics in New,
+// naming the node: go-core's binds only to go-core's Coordinator, and
+// unbound it would report not ready forever.
 //
 // # Running and monitors
 //

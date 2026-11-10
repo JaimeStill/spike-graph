@@ -35,9 +35,17 @@ func (g *Graph) Group(name string) *Group {
 	return grp
 }
 
-// Name returns the name the group was defined with.
-func (grp *Group) Name() string { return grp.name }
+// Name returns the name the group was defined with, or the empty string for
+// a nil handle. A zero-value literal, &Group{}, has the empty name already.
+func (grp *Group) Name() string {
+	if grp == nil {
+		return ""
+	}
+	return grp.name
+}
 
+// expand treats a zero-value literal, &Group{}, as a nil handle: it has no
+// Graph, since only [Graph.Group] makes one.
 func (grp *Group) expand() (*Graph, []*node) {
 	if grp == nil {
 		return nil, nil

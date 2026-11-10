@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/JaimeStill/spike-graph/sdk/graph"
+	core "github.com/standards-lab/go-core/lifecycle"
 )
 
 // Coordinator runs one built [graph.System]: it starts the System's layers,
@@ -33,8 +34,11 @@ type Coordinator struct {
 // infers its [Coordinator.Checks] from the values that implement
 // [ReadyStarter], and watches every [Monitored] value in sys as
 // [Coordinator.Monitor] would. It panics on a nil sys, a ShutdownTimeout
-// that is not positive, as an unfinalized Config's is, or a Readiness
-// already bound to another Coordinator: each is a wiring mistake.
+// that is not positive, as an unfinalized Config's is, a Readiness already
+// bound to another Coordinator, or a node whose value is go-core's
+// *lifecycle.Readiness, which only go-core's Coordinator binds and which
+// would otherwise report not ready forever; the message names the node.
+// Each is a wiring mistake, and New binds nothing when it panics.
 func New(sys *graph.System, cfg Config) *Coordinator {
 	if sys == nil {
 		panic("lifecycle: New: nil System")
@@ -49,6 +53,14 @@ func New(sys *graph.System, cfg Config) *Coordinator {
 	var bind []graph.Dependency
 	for _, layer := range sys.Layers() {
 		for _, d := range layer {
+			if _, ok := d.Value.(*core.Readiness); ok {
+				// go-core's binds only to go-core's Coordinator, so it would
+				// report not ready forever.
+				panic(fmt.Sprintf(
+					"lifecycle: New: Readiness %q is go-core's, which this Coordinator cannot bind; use this package's Readiness",
+					d.Name,
+				))
+			}
 			if _, ok := d.Value.(*Readiness); ok {
 				bind = append(bind, d)
 			} else if v, ok := d.Value.(ReadyStarter); ok {

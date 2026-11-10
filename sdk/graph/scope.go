@@ -41,7 +41,7 @@ func (s *Scope) Use[T any](n *Node[T]) T {
 	if s.aborted != "" {
 		panic(s.recovered())
 	}
-	core := s.build.graph.resolve(n, "Use")[0]
+	core := s.build.graph.resolve(n, "Use", false)[0]
 	// Any panic leaving construct, the abort above all, marks the scope,
 	// so construct can tell a constructor that returned after recovering
 	// it.

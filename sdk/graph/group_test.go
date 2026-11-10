@@ -166,21 +166,21 @@ func TestOrderOnlyCycle_Panics(t *testing.T) {
 func TestOptions_WiringPanics(t *testing.T) {
 	t.Run("after of a nil ref", func(t *testing.T) {
 		g := graph.New()
-		mustPanic(t, `Define "top" with After of a nil node`, func() {
+		mustPanic(t, `Define "top" with After of a nil node (is its Define later?)`, func() {
 			g.Define("top", zero, graph.After(nil))
 		})
 	})
 	t.Run("after of a nil node", func(t *testing.T) {
 		g := graph.New()
 		var n *graph.Node[int]
-		mustPanic(t, `Define "top" with After of a nil node`, func() {
+		mustPanic(t, `Define "top" with After of a nil node (is its Define later?)`, func() {
 			g.Define("top", zero, graph.After(n))
 		})
 	})
 	t.Run("after of a nil group", func(t *testing.T) {
 		g := graph.New()
 		var grp *graph.Group
-		mustPanic(t, `Define "top" with After of a nil group`, func() {
+		mustPanic(t, `Define "top" with After of a nil group (is its Group later?)`, func() {
 			g.Define("top", zero, graph.After(grp))
 		})
 	})
@@ -193,7 +193,7 @@ func TestOptions_WiringPanics(t *testing.T) {
 	})
 	t.Run("in a nil group", func(t *testing.T) {
 		g := graph.New()
-		mustPanic(t, `Define "top" with In of a nil group`, func() {
+		mustPanic(t, `Define "top" with In of a nil group (is its Group later?)`, func() {
 			g.Define("top", zero, graph.In(nil))
 		})
 	})
@@ -213,7 +213,7 @@ func TestOptions_WiringPanics(t *testing.T) {
 	t.Run("a panicking Define changes nothing", func(t *testing.T) {
 		g := graph.New()
 		workers := g.Group("workers")
-		mustPanic(t, `Define "top" with After of a nil node`, func() {
+		mustPanic(t, `Define "top" with After of a nil node (is its Define later?)`, func() {
 			g.Define("top", zero, graph.In(workers), graph.After(nil))
 		})
 		// The name is still free, and the group gained no member.

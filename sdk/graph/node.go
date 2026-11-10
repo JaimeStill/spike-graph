@@ -36,12 +36,13 @@ type Ref interface {
 	// Name returns the name the node or group was defined with.
 	Name() string
 	// expand returns the Graph the ref was defined on, nil for a nil
-	// handle, and the nodes it stands for.
+	// handle or a zero-value literal, and the nodes it stands for.
 	expand() (*Graph, []*node)
 	// kind names what the ref is, "node" or "group", for a panic message.
 	kind() string
 }
 
+// ref returns n's core, nil for a nil handle or a zero-value literal.
 func (n *Node[T]) ref() *node {
 	if n == nil {
 		return nil
@@ -49,8 +50,10 @@ func (n *Node[T]) ref() *node {
 	return n.core
 }
 
+// expand treats a zero-value literal, &Node[T]{}, as a nil handle: it has
+// no core, since only Define, Value, and Fresh make one.
 func (n *Node[T]) expand() (*Graph, []*node) {
-	if n == nil {
+	if n == nil || n.core == nil {
 		return nil, nil
 	}
 	return n.core.graph, []*node{n.core}
@@ -58,5 +61,11 @@ func (n *Node[T]) expand() (*Graph, []*node) {
 
 func (*Node[T]) kind() string { return "node" }
 
-// Name returns the name the node was defined with.
-func (n *Node[T]) Name() string { return n.core.name }
+// Name returns the name the node was defined with, or the empty string for
+// a nil handle or a zero-value literal, which no Define made.
+func (n *Node[T]) Name() string {
+	if core := n.ref(); core != nil {
+		return core.name
+	}
+	return ""
+}

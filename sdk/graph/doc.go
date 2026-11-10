@@ -111,11 +111,16 @@
 // a recovered abort, a Define, Value, Fresh, Group, or Replace after
 // Build, a Get or LayerOf of a node not in the System, a LayerOf of a
 // group, which has no layer, a nil constructor, option, or observer, a nil
-// ref given to After, In, Build, or LayerOf, and an empty or duplicate
-// name, nodes and groups sharing one name space. Define, Value, and Fresh
-// check their options, for a nil ref or one defined on another Graph,
-// before they change the Graph. A cycle closed by an order-only edge, through a group included, panics at Build
-// with its path. Build checks its roots, for a nil ref or one defined on
+// ref given to After, In, Use, Build, LayerOf, Get, or Replace, and an
+// empty or duplicate name, nodes and groups sharing one name space. A
+// zero-value Node or Group literal is a nil ref: only Define, Value, Fresh,
+// and Group make a handle. Define, Value, and Fresh check their options,
+// for a nil ref or one defined on another Graph, before they change the
+// Graph; a nil After or In ref most often names a node or group defined
+// later, since an option takes a handle already defined, and the message
+// asks whether its Define or Group is later. A cycle closed by an
+// order-only edge, through a group included, panics at Build with its
+// path. Build checks its roots, for a nil ref or one defined on
 // another Graph, before it constructs any of them, so a mistake in any root
 // panics before a constructor runs.
 package graph
