@@ -101,7 +101,7 @@ Door          two-way: new packages in the spike repository that nothing imports
 
 ## Progress
 
-slices 5/8 committed · standards — · spec — · editor — (redirected by the Fable review; slices 6–8 added)
+slices 8/8 committed · standards — · spec — · editor —
 
 ## Decisions
 
