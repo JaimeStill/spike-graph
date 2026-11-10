@@ -129,8 +129,8 @@ APP_DATABASE_PORT=$POSTGRES_PORT APP_STORAGE_ENDPOINT=http://127.0.0.1:$AZURITE_
 '''
 
 # slab is a package tree of the root module, so it runs from the root against the root's go.mod.
-# go-cli-sdk and x/term are requirements of that module, but only slab imports them, so they never
-# enter cmd/server's build.
+# x/term is a requirement of that module, but only slab imports it, so it never enters
+# cmd/server's build.
 [tasks.slab]
 description = "Run slab, the narrated-scenario runner (`mise run slab -- scenario <name>`)"
 run = "go run ./tools/slab/cmd/slab"

@@ -22,9 +22,9 @@ import (
 var sqlateBuilt = []string{"repo", "no color", "lifecycle config"}
 
 // The sqlate scenario needs nothing running, so it runs here end to end on
-// sdk/cli/scenario's runner, over the repository the test runs inside: it builds
-// the nodes it declares and nothing else, narrates its four steps, and
-// shows each authored source, each registration call, and the compiled
+// sdk/cli/scenario's runner, over the repository the test runs inside: it
+// builds the nodes it declares and nothing else, narrates its four steps,
+// and shows each authored source, each registration call, and the compiled
 // statement with its placeholders.
 func TestScenario_RunsSqlate(t *testing.T) {
 	a, stdout, stderr, built := newApp(t)
