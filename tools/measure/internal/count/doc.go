@@ -6,7 +6,8 @@
 //
 // The package exports:
 //
-//   - [Counts], the measurements of one file or a sum of files
+//   - [Counts], the measurements of one file or a sum of files, and
+//     [Counts.Add], which sums two
 //   - [File], which measures one file's source
 //   - [Lines], which counts only the code and raw lines, for files (the
 //     layer tests) whose shapes are not measured
