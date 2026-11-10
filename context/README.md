@@ -25,11 +25,11 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
 ## The evidence
 
 1. A candidate `graph` package, forked from go-core v0.10.0, implements `graph.After` and
-   `graph.In` at Define, groups a Build expands, `g.Value`, `graph.Fresh`, `Ref` on Dependency,
-   `Observe(func(Ref))`, `LayerOf`, and `String`, with `Scope.After` removed; go-core's graph and
-   lifecycle tests, ported, pass: edges discovered through Use, build-once, longest-path layers,
-   panics for wiring mistakes, the participation interfaces, and startup, readiness, and
-   shutdown.
+   `graph.In` at Define, groups a Build expands, `g.Value` and `g.Fresh` with Define's options,
+   `Ref` on Dependency, `Observe(func(Ref))`, `LayerOf`, `String`, and `Dropped`, with
+   `Scope.After` removed; go-core's graph and lifecycle tests, ported, pass: edges discovered
+   through Use, build-once, longest-path layers, panics for wiring mistakes, the participation
+   interfaces, and startup, readiness, and shutdown.
 2. go-web-service's whole service runs on the candidate: its composition root migrated, every
    node's layer stated at its Define line and no constructor body ordering anything; its unit
    tests, and its integration tests against the spike's Postgres, Azurite, NATS, and otel stack,
@@ -40,7 +40,8 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
    sides; help and usage errors build nothing; its scenarios run against the migrated service on
    the stack.
 5. The layer tests are rewritten on `Roots()`, `LayerOf`, and handles: `buildAsRun`, `layerOf`,
-   and `names` are gone, and a failing test prints the layer table.
+   and `names` are gone, a failing test prints the layer table, and the full root set drops no
+   `After` (`Dropped()` is empty).
 6. A fixture name check replaces the `// "name"` comments, with its rule settled.
 7. How a `*Nodes` method reaches a plain New argument (the logger's `io.Writer`) is settled.
 8. One tier is written both as `*Nodes` methods and with arity adapters, with a verdict on
@@ -57,12 +58,14 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
   pins upgraded to latest, with go-core held at v0.10.0. The baseline task's merge commit is the
   measurement baseline. Later tasks migrate the roots in place, so the tree holds one version of
   each file and the measurements come from the diff against that commit.
-- **The candidate packages.** `graph` is forked whole from go-core v0.10.0. `lifecycle` forks only
-  Coordinator and New, which take graph's types; Check, Config, Readiness, and the participation
-  interfaces alias go-core's, so published go-web-sdk, whose `server.go` and `health.go` name
-  them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph` takes a graph. A
-  small `web` package of the spike's own holds `web.Run`. Everything else is a published
-  version, never a replace directive.
+- **The candidate packages.** Each forked library package lives under `sdk/<package>`, beside
+  the copied service's own `sdk` package. `sdk/graph` is go-core v0.10.0's `graph`, forked whole.
+  `sdk/lifecycle` forks Coordinator and New, which take graph's types, and Readiness, since
+  go-core's Readiness binds only through go-core's unexported bind. Check, Config, and the
+  participation interfaces alias go-core's, so published go-web-sdk, whose `server.go` and
+  `health.go` name them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph`
+  takes a graph. A small `web` package of the spike's own holds `web.Run`. Everything else is a
+  published version, never a replace directive.
 - **The stack.** The spike runs go-web-service's compose stack (Postgres, Azurite, NATS, and the
   observability profile) as project `spike-graph`, and the integration tier runs it as
   `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and
