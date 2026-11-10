@@ -252,9 +252,8 @@ func TestRun_BuildFailureOnStderr(t *testing.T) {
 	if code := exit(t, s.run(ctx, &stderr)); code != 1 {
 		t.Errorf("Run = %d, want 1 on a failed Build", code)
 	}
-	got := stderr.String()
-	if !strings.HasPrefix(got, "service failed: ") || !strings.Contains(got, "logger") || !strings.Contains(got, "logger unavailable") {
-		t.Errorf("stderr = %q, want service failed naming the logger node and its error", got)
+	if got, want := stderr.String(), "service failed: logger: logger unavailable\n"; got != want {
+		t.Errorf("stderr = %q, want %q, naming the logger node and its error", got, want)
 	}
 	if out := log.String(); out != "" {
 		t.Errorf("log = %q, want nothing", out)

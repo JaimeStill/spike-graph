@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"slices"
 
 	"github.com/standards-lab/go-core/process"
 
@@ -51,7 +52,7 @@ func Run[S Server](
 	roots []graph.Ref,
 	stderr io.Writer,
 ) int {
-	sys, err := g.Build(append(roots[:len(roots):len(roots)], lifecycleConfig)...)
+	sys, err := g.Build(append(slices.Clip(roots), lifecycleConfig)...)
 	if err != nil {
 		return process.Fail(stderr, "service failed", err)
 	}
