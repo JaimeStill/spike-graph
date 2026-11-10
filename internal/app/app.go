@@ -36,12 +36,12 @@ type App struct {
 // Nodes is the App's graph, one handle per node: the single description of
 // what the service is composed of. Each layer file's define function fills
 // its own part of one Nodes value, and its constructors read the lower
-// layers' nodes from that same value. Each node's name is its field's
-// name lowercased, spaced between words where the field joins them, as
-// "lifecycle config" is; it is the name the lifecycle labels its errors
-// with and the readiness probe reports its check under. A value only one
-// node uses is built inside that node's constructor rather than as a node
-// of its own.
+// layers' nodes from that same value. Each node's name, lowercased with
+// its spaces removed, is its field's name lowercased: "lifecycle config"
+// names LifecycleConfig, and "meterprovider" names MeterProvider. It is the
+// name the lifecycle labels its errors with and the readiness probe reports
+// its check under. A value only one node uses is built inside that node's
+// constructor rather than as a node of its own.
 type Nodes struct {
 	// The App's inputs (app.go): the configuration and the logger's
 	// writer New was given, each the same value in every Build.
@@ -127,7 +127,7 @@ func (a *App) Roots() []graph.Ref {
 	return []graph.Ref{n.Server, n.Schema, n.Telemetry, n.Reactors}
 }
 
-// Run runs the service with [web.Run], the candidate runner, and returns
+// Run runs the service with [sdkweb.Run], the candidate runner, and returns
 // the process exit code. It builds [App.Roots] and the lifecycle config
 // node, hands the System to a lifecycle Coordinator configured from that
 // node, and runs it until ctx ends; the logger and the server it reads are

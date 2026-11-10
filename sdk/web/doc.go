@@ -12,6 +12,7 @@
 //   - [Server], the constraint on the server node's value: it reports the
 //     address it bound
 //
-// The package name is the library it is bound for, go-web-sdk, whose own
-// package is also named web; a file that imports both aliases one.
+// The package is named web after go-web-sdk, the library it is bound for,
+// whose own package is also named web; a file that imports both aliases
+// one, as internal/app imports this package as sdkweb.
 package web

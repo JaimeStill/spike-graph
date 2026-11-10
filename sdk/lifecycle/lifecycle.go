@@ -133,10 +133,10 @@ func (c *Coordinator) Checks() []Check {
 // shutdown begins, and a monitored failure ends fn's context. It returns
 // fn's error as fn returned it, joined with any monitored failure wrapped
 // "run:", a [Monitored] value's labelled with its node's name, and with the
-// shutdown's error. When startup fails, or ctx ends
-// before startup completes, fn does not run and Exec returns the startup
-// error, or ctx's, wrapped "startup:" and joined with the shutdown's. A second call to Exec or
-// [Coordinator.Run] panics.
+// shutdown's error. When startup fails, or ctx ends before startup
+// completes, fn does not run and Exec returns the startup error, or ctx's,
+// wrapped "startup:" and joined with the shutdown's. A second call to Exec
+// or [Coordinator.Run] panics.
 func (c *Coordinator) Exec(ctx context.Context, fn func(context.Context) error) error {
 	return c.execute(ctx, "Exec", false, func(runCtx context.Context, monitored func() error) error {
 		err := fn(runCtx)
@@ -153,7 +153,8 @@ func (c *Coordinator) Exec(ctx context.Context, fn func(context.Context) error) 
 // shut down, and Run returns only the shutdown's error, nil when it is
 // clean. A startup failure returns the startup error wrapped "startup:", and
 // a monitored failure returns it wrapped "run:", a [Monitored] value's
-// labelled with its node's name, each joined with the shutdown's. A second call to Run or [Coordinator.Exec] panics.
+// labelled with its node's name, each joined with the shutdown's. A second
+// call to Run or [Coordinator.Exec] panics.
 func (c *Coordinator) Run(ctx context.Context) error {
 	return c.execute(ctx, "Run", true, func(runCtx context.Context, monitored func() error) error {
 		<-runCtx.Done()

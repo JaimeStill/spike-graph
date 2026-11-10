@@ -57,15 +57,23 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
   in the module path, gofmt's import order, the compose project name, and dependencies and image
   pins upgraded to latest, with go-core held at v0.10.0. The baseline task's merge commit is the
   measurement baseline. Later tasks migrate the roots in place, so the tree holds one version of
-  each file and the measurements come from the diff against that commit.
-- **The candidate packages.** Each forked library package lives under `sdk/<package>`, beside
-  the copied service's own `sdk` package. `sdk/graph` is go-core v0.10.0's `graph`, forked whole.
-  `sdk/lifecycle` forks Coordinator and New, which take graph's types, and Readiness, since
-  go-core's Readiness binds only through go-core's unexported bind. Check, Config, and the
-  participation interfaces alias go-core's, so published go-web-sdk, whose `server.go` and
-  `health.go` name them, works unchanged. go-cli-sdk v0.2.0's `cli` is forked, since `WithGraph`
-  takes a graph. A small `web` package of the spike's own holds `web.Run`. Everything else is a
-  published version, never a replace directive.
+  each file and the measurements come from the diff against that commit. The service's
+  composition root, `internal/app`, runs on the candidate packages and no longer imports go-core's
+  `graph`; slab still runs on go-core's.
+- **The candidate packages.** Each candidate library package lives under `sdk/<package>`, beside
+  the copied service's own `sdk` package. Everything else is a published version, never a replace
+  directive.
+  - `sdk/graph` is go-core v0.10.0's `graph`, forked whole. Its `graphtest` package holds the
+    name check, `CheckNames`, which the service's tests run on its Nodes.
+  - `sdk/lifecycle` forks Coordinator and New, which take graph's types, and Readiness, since
+    go-core's Readiness binds only through go-core's unexported bind. Check, Config, and the
+    participation interfaces alias go-core's, so published go-web-sdk, whose `server.go` and
+    `health.go` name them, works unchanged. It diverges from v0.10.0 in two ways: New rejects
+    go-core's Readiness, and a Monitored value's runtime failure names its node, as
+    "run: <node>: <error>".
+  - `sdk/web` holds `web.Run`, the service runner, which App.Run calls. The service imports it as
+    `sdkweb`, since go-web-sdk's package is also `web`.
+  - go-cli-sdk v0.2.0's `cli` is planned as a fork, since `WithGraph` takes a graph.
 - **The stack.** The spike runs go-web-service's compose stack (Postgres, Azurite, NATS, and the
   observability profile) as project `spike-graph`, and the integration tier runs it as
   `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and
