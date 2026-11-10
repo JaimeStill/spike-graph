@@ -28,8 +28,9 @@ import (
 // failure would be reported and service's never probed. The After edge
 // puts grafana up a layer above service whenever both are in the System,
 // so with nothing running the failure names service and mise run serve.
-// After builds nothing, so a scenario that declares only grafana up does
-// not gain service; the Build drops the edge instead.
+// After builds nothing, so a scenario that declares grafana up must also
+// declare service: otherwise the Build drops the edge, and slab's layer
+// test fails.
 func defineScenarioNodes(g *graph.Graph, n *Nodes) {
 	n.Service = g.Define("service", n.newService)
 	n.GrafanaUp = g.Define("grafana up", n.newGrafanaUp, graph.After(n.Service))

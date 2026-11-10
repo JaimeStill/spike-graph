@@ -52,19 +52,22 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
 
 ## How it is built
 
-- **The roots.** The root module, `github.com/JaimeStill/spike-graph`, is go-web-service copied
-  whole at 5bb590e; slab is its own module under `tools/slab`. The copies differ from 5bb590e only
-  in the module path, gofmt's import order, the compose project name, and dependencies and image
-  pins upgraded to latest, with go-core held at v0.10.0. The baseline task's merge commit is the
-  measurement baseline. Later tasks migrate the roots in place, so the tree holds one version of
-  each file and the measurements come from the diff against that commit. The service's
-  composition root, `internal/app`, runs on the candidate packages and no longer imports go-core's
-  `graph`; slab still runs on go-core's.
+- **The roots.** The root module, `github.com/JaimeStill/spike-graph`, holds go-web-service and
+  slab, both copied whole at 5bb590e. slab is a package tree under `tools/slab` with no `go.mod`
+  of its own, so it reaches the candidate packages without a replace directive. The copies differ
+  from 5bb590e only in the module path, gofmt's import order, the compose project name, and
+  dependencies and image pins upgraded to latest, with go-core held at v0.10.0. The baseline
+  task's merge commit is the measurement baseline. Later tasks migrate the roots in place, so the
+  tree holds one version of each file and the measurements come from the diff against that commit.
+  Both composition roots, the service's `internal/app` and slab's `tools/slab/internal/app`, run on
+  the candidate packages. The service's `internal/config` imports go-core's `lifecycle` for
+  Config, which `sdk/lifecycle` aliases; no other package outside `sdk/` imports go-core's `graph`
+  or `lifecycle`.
 - **The candidate packages.** Each candidate library package lives under `sdk/<package>`, beside
   the copied service's own `sdk` package. Everything else is a published version, never a replace
   directive.
   - `sdk/graph` is go-core v0.10.0's `graph`, forked whole. Its `graphtest` package holds the
-    name check, `CheckNames`, which the service's tests run on its Nodes.
+    name check, `CheckNames`, which the service's and slab's tests run on their Nodes.
   - `sdk/lifecycle` forks Coordinator and New, which take graph's types, and Readiness, since
     go-core's Readiness binds only through go-core's unexported bind. Check, Config, and the
     participation interfaces alias go-core's, so published go-web-sdk, whose `server.go` and
@@ -73,7 +76,10 @@ ready, failed, and stopped logs go; and how a `*Nodes` method reaches a plain va
     "run: <node>: <error>".
   - `sdk/web` holds `web.Run`, the service runner, which App.Run calls. The service imports it as
     `sdkweb`, since go-web-sdk's package is also `web`.
-  - go-cli-sdk v0.2.0's `cli` is planned as a fork, since `WithGraph` takes a graph.
+  - `sdk/cli` and `sdk/cli/scenario` are go-cli-sdk v0.2.0's `cli` and `scenario`, forked whole
+    because `WithGraph` takes a graph. They differ from v0.2.0 only in their imports and in one
+    behavior: a value that fails while a command runs is reported as "run: <node>: <error>", as
+    `sdk/lifecycle` reports it. slab runs on them.
 - **The stack.** The spike runs go-web-service's compose stack (Postgres, Azurite, NATS, and the
   observability profile) as project `spike-graph`, and the integration tier runs it as
   `spike-graph-integration`. `mise.toml`'s `[env]` sets every host port and the service's and

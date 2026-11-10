@@ -90,7 +90,7 @@ Two-way. Only the spike repository changes, nothing is released, and each slice 
 
 ## Progress
 
-slices 0/5 committed · standards — · spec — · editor —
+slices 5/5 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
@@ -98,7 +98,7 @@ slices 0/5 committed · standards — · spec — · editor —
 - setup: the copies are committed unchanged as a baseline on go-core v0.10.0, then migrated in place; the before/after table comes from that diff. Superseded by baseline: the copy's dependencies are upgraded, and the measurement baseline is the baseline task's merge commit.
 - setup: fork go-core's `graph` whole; fork only `lifecycle`'s Coordinator and New and alias the rest, so published go-web-sdk works unchanged; fork go-cli-sdk v0.2.0's `cli`; `web.Run` in the spike's own `web` package.
 - setup: the stack is the spike's own copy (own project name and ports, observability profile included), never go-web-service's dev stack.
-- baseline: the copied service is the root module github.com/JaimeStill/spike-graph; slab stays its own module .../tools/slab.
+- baseline: the copied service is the root module github.com/JaimeStill/spike-graph; slab stays its own module .../tools/slab. Superseded by cli: slab folds into the root module.
 - baseline: stack ports come from the mise environment; the copied files change only by the path rewrite, gofmt import order, and the compose project name.
 - baseline: the copy's dependencies and image pins are upgraded to latest; go-web-service's own upgrades are planned at intake.
 - baseline: held go-core at v0.10.0: the candidate's fork point; latest v0.10.0.
@@ -106,13 +106,13 @@ slices 0/5 committed · standards — · spec — · editor —
 - baseline: go-web-service's repository-level files and CI are left out; package-level docs are copied as-is.
 - baseline: slab's scenarios run once on the baseline as demo evidence.
 - baseline: the measurement baseline is this task's merge commit; the copy-as-is commit stays in history.
-- baseline: noted for cli: slab must reach the candidate forks in the root module without a replace directive, by folding slab into the root module or a go.work; folding puts slab on the root module's sqlate version.
+- baseline: noted for cli: slab must reach the candidate forks in the root module without a replace directive, by folding slab into the root module or a go.work; folding puts slab on the root module's sqlate version. Superseded by cli: slab folds into the root module, with no go.work.
 - baseline: [env] sets APP_ENV=local, so serve reads config.local.json.
 - baseline: [env] derives every APP_* and SLAB_* setting from the port variables, so each port is set in one place.
 - baseline: the stack tasks read only the spike's [env]; no task falls back to go-web-service's ports.
 - baseline: integration keeps [env]'s APP_OBSERVABILITY_ENDPOINT; its telemetry reaches the spike's dev collector when that is up, as go-web-service's does.
 - baseline: go-web-service's vet, test, fmt, tidy, and lint tasks are not copied; the spike's one check covers them.
-- baseline: the root module's indirect golang.org/x/sys stays at v0.48.0; currency doesn't scan indirect requirements.
+- baseline: the root module's indirect golang.org/x/sys stays at v0.48.0; currency doesn't scan indirect requirements. Superseded by cli: the root takes slab's x/sys v0.50.0 as a direct requirement.
 - baseline: slab runs through `mise run slab`; a bare slab binary defaults to go-web-service's ports.
 - candidate: fork lifecycle's Readiness with Coordinator and New; go-core's Readiness binds only through go-core's unexported bind, and go-web-sdk takes it only through Doctor. Amends setup's "fork only Coordinator and New".
 - candidate: LayerOf panics with a "graph: " message for a node not in the System, as Get does.
@@ -163,17 +163,29 @@ slices 0/5 committed · standards — · spec — · editor —
 - web: noted for intake: the sealed exported Ref is a clean reflection seam for tooling such as graphtest.
 - web: noted for intake: graphtest relies on Define, Value, Fresh, and Group refusing the empty name, so only a zero-value literal has one; the refusal is part of the contract.
 - web: noted for intake: Fresh's per-Build zero value is proven by sdk/graph's tests, not by the service's.
-- web: noted for cli: slab's name check reuses sdk/graph/graphtest.
-- web: noted for cli: internal/config still imports go-core's lifecycle for Config, which sdk/lifecycle aliases.
+- web: noted for cli: slab's name check reuses sdk/graph/graphtest. Done in cli: slab's graph test runs graphtest.CheckNames on its Nodes.
+- web: noted for cli: internal/config still imports go-core's lifecycle for Config, which sdk/lifecycle aliases. Still true after cli: the brief left that import out of scope, and slab imports no go-core graph or lifecycle.
 - cli: slab folds into the root module; its go.mod is deleted and no go.work is used. Supersedes baseline's "slab stays its own module".
 - cli: folding takes slab's pins into the root (nats.go v1.55.0, x/sys v0.50.0, x/term v0.48.0), so currency stays at exit 0, and x/sys becomes direct. Supersedes baseline's hold of the root's indirect x/sys at v0.48.0.
 - cli: go-cli-sdk v0.2.0's scenario is forked with cli, at sdk/cli/scenario beside sdk/cli. Both are forked whole, changing only imports and the monitored-failure test, which expects sdk/lifecycle's "run: <node>: <error>".
 - cli: slab's seven run settings take their constructors from a flags.setting(name, default, parse) method on the root flags, as the design note's Sketch 2 proposes.
 - cli: slab gains one layer test over every scenario: Dropped() is empty, grafana up sits a layer above service, and a failure prints the layer table.
 - cli: client, broker, service, and grafana up are built by methods on Nodes, following the web task's precedent.
+- cli: slab's --help exits 2 (ExitUsage), v0.2.0's behavior; the fork doesn't change it.
+- cli: flags.setting is a generic method on *rootFlags, which Go 1.27's method type parameters allow; each setting is one Define line.
+- cli: newLifecycleConfig stays a plain function passed to Define; it reads no node, so a *Nodes receiver would go unused.
+- cli: repo's nested-module test fixture stays, so the module walk still proves it passes over a nested module that declares another path.
+- cli: sdk/cli's doc drops v0.2.0's depguard claim; the spike enforces no depguard on sdk/cli.
+- cli: slab's layer test reads the registered scenarios through scenarios.All over App.Nodes(), not an export_test hook; tests-and-docs allows a hook only for a clock, probe, or fixture node.
+- cli: the layer test fails on any dropped After, so a scenario that declares grafana up without service fails it; scenario.go's comment says so.
+- cli: noted for intake: slab's migration needed no API change beyond Scope.After → graph.After and Observe(func(Ref)); the cli fork compiled on import rewrites alone.
+- cli: noted for intake: cli.Command exposes no accessor for its children.
+- cli: noted for intake: nothing in sdk/cli reads System.Dropped, so only slab's layer test catches a scenario's dropped After.
+- cli: noted for adapters: slab's wrapper constructors are replaced: newSetting by flags.setting (7 settings), newClient and newBroker by *Nodes methods, and the service and grafana up Define closures by *Nodes methods.
 
 ## Pending edits
 
 - coordinator · experiment.graph intake: plan go-web-service's dependency upgrades to the versions spike-graph adopted in its baseline.
-- coordinator · roadmap: spike-graph's summary says lifecycle forks Coordinator, New, and Readiness, and the forks live under sdk/.
+- coordinator · roadmap: spike-graph's summary says lifecycle forks Coordinator, New, and Readiness, go-cli-sdk's `scenario` is forked with `cli`, and the forks live under sdk/.
 - coordinator · roadmap: the candidate task's summary says `graph.Fresh`; it is the method `g.Fresh[T]`.
+- coordinator · roadmap: the cli task's summary says it folds slab into the root module and forks go-cli-sdk v0.2.0's `cli` and `scenario`.

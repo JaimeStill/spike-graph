@@ -1,7 +1,7 @@
 // Package web is the spike's candidate runner for a long-running web
 // service built on the candidate graph (sdk/graph) and run by the candidate
-// lifecycle (sdk/lifecycle): the service's counterpart to go-cli-sdk's
-// cli.Run, which does the same for a command.
+// lifecycle (sdk/lifecycle): the service's counterpart to the candidate
+// cli's Run (sdk/cli), which does the same for a command.
 //
 // The package exports:
 //
