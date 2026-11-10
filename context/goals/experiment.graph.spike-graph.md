@@ -1,96 +1,16 @@
 # goal · experiment.graph.spike-graph
 
-- **State:** brief ready
-- **Task:** cli
-- **Branch:** cli
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] baseline
 2. [x] candidate
 3. [x] web
-4. [ ] cli
+4. [x] cli
 5. [ ] adapters
-
-## Task brief · cli
-
-**Problem**
-Evidence 4 is still open. slab runs on go-core's `graph` and `lifecycle` and on published go-cli-sdk v0.2.0, so the candidate API hasn't been tried on a real CLI yet. Three things are needed:
-- slab has to reach the spike's candidate packages without a replace directive;
-- go-cli-sdk's `cli` and `scenario` packages have to be forked onto the candidate graph;
-- slab's composition root has to be migrated.
-
-The migration must keep slab's guarantee that help and usage errors build nothing, and its scenarios must still run against the service the web task migrated. The adapters task measures from this result.
-
-**Behaviors**
-1. slab is part of the root module. One `mise run check` builds, vets, formats, tidies, tests, and lints it alongside the service. `mise run slab` still runs it with the spike's `[env]` settings, and `mise run currency` exits 0.
-2. The forked `cli` package keeps go-cli-sdk v0.2.0's behavior and runs on the candidate graph and lifecycle. Its ported tests pass, covering:
-   - the dispatch order;
-   - Use inherited along the command path and built once;
-   - the lifecycle config node added to every Build;
-   - help, unknown commands, flag errors, argument counts, required and exclusive flags, Validate, and a PreRun usage error, all building nothing;
-   - failures reported once with the right exit code;
-   - the shutdown timeout read from the config node;
-   - the panics for wiring mistakes;
-   - flags restored across dispatches.
-3. A value that fails while a command runs is reported as `run: <node>: <error>`, naming its node, the same way the candidate lifecycle reports it for the service. This is the one intended difference from v0.2.0.
-4. The forked `scenario` package keeps v0.2.0's behavior on the candidate graph: the scenario parent, one leaf per scenario declaring its nodes, the listing, narrated steps, and the step-failure report. Its ported tests pass.
-5. slab imports nothing from go-core's `graph` or `lifecycle`, and nothing from go-cli-sdk.
-6. Root help, a parent run alone, every usage error, and version build no node and read no configuration. The observer records nothing even when every SLAB_* setting can't be read.
-7. A command builds exactly the nodes its path declares, plus the lifecycle config node. A setting is read only by a command that declares it. A flag overrides its SLAB_* variable, which overrides the default. A shutdown timeout that can't be parsed fails any command that declares nodes.
-8. Order and constructors are stated at Define:
-   - grafana up's order after service is stated where grafana up is defined, and no constructor body orders anything;
-   - client, broker, service, and grafana up are built by methods on Nodes, following the web task's precedent;
-   - the seven run settings take their constructors from a `setting(name, default, parse)` method on the root flags;
-   - no wrapper constructor or Define closure remains.
-9. The lifecycle config node is the node the dispatcher configures the Coordinator from, and it reads SLAB_SHUTDOWN_TIMEOUT.
-10. The shared name check from the candidate graph's test package runs on slab's Nodes and passes, and the name comments are gone.
-11. For every scenario, building its declared nodes plus the lifecycle config node gives a System where Dropped() is empty and grafana up sits a layer above service whenever both are present. A failure prints the layer table.
-12. With nothing running, a scenario that declares both service and grafana up stops at startup on service and names `mise run serve`.
-13. On the stack, with the migrated service running, all six scenarios run to completion through `mise run slab -- scenario <name>`: sqlate, domain, problems, storage, events, and sweeper.
-
-**Test seams**
-- `cli.Run` over buffered Streams, with an observed candidate graph (behaviors 2–4).
-- slab's App: `New` with buffered Streams, then `Run(ctx, args)`, observed through `App.Graph()` and `App.Nodes()` (behaviors 5–12).
-- The scenarios against the stack (behavior 13).
-
-**Slices**
-1. **Fold slab into the root module.**
-   - slab's go.mod is removed, and no go.work is added.
-   - The root takes slab's pins: nats.go v1.55.0, x/sys v0.50.0, x/term v0.48.0. x/sys becomes direct.
-   - GO_MODULES becomes the root alone, and the slab task runs from the root.
-   - slab still runs on go-core and go-cli-sdk.
-   - Demo: check passes and covers slab, currency exits 0, and `mise run slab -- --help` prints root help.
-2. **Fork cli and scenario.**
-   - go-cli-sdk v0.2.0's `cli` and `scenario` are forked whole to sdk/cli and sdk/cli/scenario.
-   - The only changes are the imports and the monitored-failure test and doc.
-   - Demo: the ported tests pass in check (behaviors 2–4).
-3. **Migrate slab onto the candidate.**
-   - Every slab package moves to the candidate packages.
-   - grafana up's After moves to its Define.
-   - The four Nodes methods and `flags.setting` replace the wrapper constructors and closures.
-   - apptest's observer takes handles.
-   - go-cli-sdk leaves the root's requirements.
-   - Demo: check passes with what the existing tests assert unchanged, the import listing is clean, and help and a usage error build nothing (behaviors 5–9 and 12).
-4. **Name check and layer test.**
-   - Demo: check passes, and each test fails readably when a name or an After is broken by hand (behaviors 10–11).
-5. **Scenarios on the stack.**
-   - slab's package docs say it runs on the candidate.
-   - Demo: with `mise run stack:up`, `otel:up`, and `mise run serve`, the six scenarios run, and their transcripts are kept as evidence (behavior 13).
-
-**Out of scope**
-- Arity adapters, the before/after table, and the decision marks (the adapters task).
-- Any change to go-cli-sdk, go-core, go-cli-sdk-template, or go-web-service.
-- Command families beyond their imports.
-- The service config package's go-core lifecycle import.
-- An integration tier for slab.
-
-**Door**
-Two-way. Only the spike repository changes, nothing is released, and each slice can be reverted from git.
-
-## Progress
-
-slices 5/5 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
