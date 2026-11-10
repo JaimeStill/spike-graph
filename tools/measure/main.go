@@ -43,17 +43,17 @@ func main() {
 // writes the tables to w, all at once once every root is measured, so a
 // failure prints no partial table.
 func run(w io.Writer) error {
-	top, err := git("rev-parse", "--show-toplevel")
+	top, err := git("", "rev-parse", "--show-toplevel")
 	if err != nil {
 		return fmt.Errorf("find the repository root: %w", err)
 	}
 	repo := strings.TrimSpace(string(top))
-	if _, err := git("rev-parse", "--verify", "--quiet", baseline+"^{commit}"); err != nil {
+	if _, err := git(repo, "rev-parse", "--verify", "--quiet", baseline+"^{commit}"); err != nil {
 		return fmt.Errorf("cannot read baseline commit %s: %w", baseline, err)
 	}
 	var out strings.Builder
 	for i, r := range roots {
-		before, err := measure(r, baselineSource{})
+		before, err := measure(r, baselineSource{repo: repo})
 		if err != nil {
 			return fmt.Errorf("%s at %s: %w", r.dir, baseline, err)
 		}
@@ -79,11 +79,12 @@ type source interface {
 	read(file string) ([]byte, error)
 }
 
-// baselineSource reads the baseline commit through git.
-type baselineSource struct{}
+// baselineSource reads the baseline commit through git, run in repo so
+// paths resolve from the repository root wherever measure runs.
+type baselineSource struct{ repo string }
 
-func (baselineSource) list(dir string) ([]string, error) {
-	out, err := git("ls-tree", "--name-only", baseline, dir+"/")
+func (s baselineSource) list(dir string) ([]string, error) {
+	out, err := git(s.repo, "ls-tree", "--name-only", baseline, dir+"/")
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +105,7 @@ func (s baselineSource) read(file string) ([]byte, error) {
 	if !slices.Contains(names, path.Base(file)) {
 		return nil, nil
 	}
-	src, err := git("show", baseline+":"+file)
+	src, err := git(s.repo, "show", baseline+":"+file)
 	if err != nil {
 		return nil, err
 	}
@@ -215,11 +216,12 @@ func write(w *strings.Builder, r root, before, after measured) {
 	}
 }
 
-// git runs git with args and returns its stdout, or an error carrying its
-// stderr.
-func git(args ...string) ([]byte, error) {
+// git runs git with args in dir, the current directory when dir is empty,
+// and returns its stdout, or an error carrying its stderr.
+func git(dir string, args ...string) ([]byte, error) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {

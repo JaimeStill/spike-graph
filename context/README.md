@@ -158,8 +158,10 @@ wrapper constructors, closures, and name comments gone; arity adapters don't shi
    and doc.go. Raw lines barely move because the doc comments were rewritten to the spike's
    standards. The layer tests are their own row and grew on purpose: handles, the layer table
    printed on failure, and the Dropped guard; slab's layer test is new. slab's remaining wrapper
-   is `flags.setting`, which returns a constructor as Sketch 2 proposes; its remaining closures
-   are that constructor and the CLI's callbacks.
+   is `flags.setting`, which returns a constructor as Sketch 2 proposes. Its 7 remaining closures
+   are that constructor; `env`, the local helper `bindRootFlags` names each flag's variable with;
+   `preRun`'s `VisitAll` callback; and four callbacks the CLI takes: the root's `Footer`,
+   `version`'s `Run`, and `outputSource`'s `New` with the color check nested in it.
 
 ### Decisions 9–14
 
@@ -167,8 +169,10 @@ wrapper constructors, closures, and name comments gone; arity adapters don't shi
   each After that ordered nothing, and After needs a handle defined earlier, so the service
   defines its telemetry layer first.
 - **10, constructors are methods on `*Nodes`: kept.** `flags.setting` returns a constructor, as
-  Sketch 2 proposes; `newLifecycleConfig` and `newMeterProvider` stay plain functions. The open
-  fork, arity adapters, is dropped by the architect's judgment, not measured (8).
+  Sketch 2 proposes. The service's `newLifecycleConfig` is a `*Nodes` method like the other
+  constructors; slab's `newLifecycleConfig` and the service's `newMeterProvider` stay plain
+  functions. The open fork, arity adapters, is dropped by the architect's judgment, not measured
+  (8).
 - **11, values and fresh values: changed.** Fresh is the method `g.Fresh[T](name)`; Value and
   Fresh take Define's options, so a participant can join a group; a `*Nodes` method reaches a
   plain value through a `graph.Value` node.
