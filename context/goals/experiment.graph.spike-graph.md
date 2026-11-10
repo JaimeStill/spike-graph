@@ -1,107 +1,16 @@
 # goal · experiment.graph.spike-graph
 
-- **State:** brief ready
-- **Task:** candidate
-- **Branch:** candidate
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] baseline
-2. [ ] candidate
+2. [x] candidate
 3. [ ] web
 4. [ ] cli
 5. [ ] adapters
-
-## Task brief · candidate
-
-```
-Problem       The web, cli, and adapters tasks migrate the roots onto a candidate
-              graph and lifecycle that doesn't exist yet. Decisions 9-13 of go-core's
-              design note need an implementation forked from go-core v0.10.0, proven
-              by go-core's own tests, before any root can be measured against the
-              baseline.
-Behaviors     1. Define takes options. graph.After(refs...) orders the node after each
-                 ref in the System: it starts after the ref and stops before it. It
-                 never builds the ref, and a ref outside the System is dropped, as
-                 Scope.After does today.
-              2. g.Group(name) returns a group handle that is a Ref; graph.In(group)
-                 makes a node a member. A Build given a group as a root builds every
-                 member. graph.After(group) orders after each member in the System.
-                 Membership is complete when Build expands it, and an empty group
-                 builds and orders nothing.
-              3. Scope has Use only; Scope.After is gone.
-              4. g.Value(name, v) defines a node whose value is v in every Build.
-              5. g.Value(name, v, opts...) and g.Fresh[T](name, opts...) take the
-                 same options as Define. Fresh is a method; its node's value is a new
-                 zero *T in each Build, so two Builds give two distinct pointers.
-                 Value's doc says a lifecycle participant or a Readiness belongs in
-                 Fresh or Define, since Value hands every Build the same value.
-              6. Dependency is {Name, Value, Ref}. Ref equals the handle Define,
-                 Value, or Fresh returned.
-              7. Observe(func(Ref)) fires exactly when it does today: once for each
-                 node a Build begins, before its constructor, depth-first, including
-                 a node whose constructor fails. It passes that node's handle.
-              8. System.LayerOf(ref) returns the node's layer. It panics with a
-                 "graph: " message for a node not in the System, and for a group.
-              9. System.String() prints the layer table, one line per layer: the layer
-                 number, then the node names in definition order.
-              10. Wiring mistakes still panic with "graph: " messages: every v0.10.0
-                  case, plus these. After or In given a nil ref or one from another
-                  Graph panics at Define. A Group after Build, or with an empty or
-                  duplicate name, panics; groups share the node namespace. A cycle
-                  closed by order-only edges, through a group included, panics at
-                  Build with its path.
-              11. Replace swaps only the constructor: the node keeps the After and In
-                  it was defined with.
-              12. The forked lifecycle's New takes a candidate System and returns a
-                  Coordinator with all of v0.10.0's behavior: startup, readiness,
-                  OnReady, Monitor and Monitored, Exec, Run, shutdown. Readiness is
-                  forked and bound by New. Check, ReadinessChecker, Config, Env,
-                  NewEnv, Starter, Stopper, Subsystem, ReadyStarter, and Monitored
-                  alias go-core's, so a go-web-sdk Server takes part, and the forked
-                  Coordinator and Readiness each satisfy go-web-sdk's Doctor.
-              13. go-core's graph and lifecycle tests, ported with Scope.After rewritten
-                  as graph.After at Define, pass under -race. Config's tests stay
-                  with go-core, since Config is aliased.
-              14. The candidates live under sdk/ as sdk/graph and sdk/lifecycle. The
-                  roots are untouched and still on go-core v0.10.0, and
-                  `mise run check` passes.
-              15. System.Dropped() reports each After that orders nothing in the
-                  System: a node target not in it, or a group with no member in it,
-                  as the declaring node's and the target's handles. A full build
-                  reports none.
-              16. A zero-value Node or Group literal given to After, In, Build, or
-                  LayerOf panics with a "graph: " message. A nil After or In ref's
-                  message says its Define may come later. lifecycle.New panics when
-                  a node's value is go-core's *Readiness, which it can't bind.
-Test seams    The candidate graph's exported API (Graph, Node, Group, Scope, System),
-              and the forked lifecycle's New over a System the candidate graph built.
-Slices        (no upgrade slice: spike-graph is current; go-core is held)
-              1. Fork graph verbatim into sdk/graph, with go-core's graph tests
-                 ported and passing: the fork point, green.
-              2. Order and groups at Define; Scope.After removed; the After tests
-                 rewritten; new tests for groups and the Define-time panics.
-              3. Value and Fresh.
-              4. Introspection: Dependency.Ref, Observe(func(Ref)), LayerOf, String.
-              5. Fork lifecycle's Coordinator, New, and Readiness into sdk/lifecycle,
-                 aliasing the rest; go-core's lifecycle tests ported and passing,
-                 plus a compile-time check that the forked Coordinator and Readiness
-                 are go-web-sdk Doctors.
-              6. Options on Value and Fresh; Fresh as a method (Fable review).
-              7. System.Dropped() (Fable review).
-              8. Zero-literal handles, the nil-After hint, and the go-core Readiness
-                 guard (Fable review).
-Out of scope  Migrating the composition root and its layer tests, web.Run, the name
-              check, and how a *Nodes method reaches a plain value (web); the cli fork
-              and slab (cli); arity adapters and the measurements (adapters);
-              any change to go-core or to the copied sdk package.
-Door          two-way: new packages in the spike repository that nothing imports yet;
-              no release.
-```
-
-## Progress
-
-slices 8/8 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
