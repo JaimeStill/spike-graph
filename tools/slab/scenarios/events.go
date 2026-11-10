@@ -11,10 +11,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-cli-sdk/scenario"
-	"github.com/standards-lab/go-core/graph"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/cli/scenario"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/document"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/organization"
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"

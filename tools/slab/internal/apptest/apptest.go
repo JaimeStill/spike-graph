@@ -5,9 +5,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/standards-lab/go-core/graph"
-	"github.com/standards-lab/go-core/lifecycle"
-
+	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/app"
 )
 
@@ -40,7 +39,7 @@ func (r *Recorder) Log() []string {
 // only the observers it has when a Build begins.
 func Builds(a *app.App) *Recorder {
 	r := &Recorder{}
-	a.Graph().Observe(r.Record)
+	a.Graph().Observe(func(ref graph.Ref) { r.Record(ref.Name()) })
 	return r
 }
 

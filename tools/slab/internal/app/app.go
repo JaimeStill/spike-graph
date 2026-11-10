@@ -3,10 +3,9 @@ package app
 import (
 	"context"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-core/graph"
-	"github.com/standards-lab/go-core/lifecycle"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 	"github.com/JaimeStill/spike-graph/tools/slab/events"
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"
 	"github.com/JaimeStill/spike-graph/tools/slab/scenarios"

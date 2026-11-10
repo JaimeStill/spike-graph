@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/standards-lab/go-cli-sdk"
 	"github.com/standards-lab/go-core/event"
-	"github.com/standards-lab/go-core/graph"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
 )
 

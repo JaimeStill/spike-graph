@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/standards-lab/go-cli-sdk"
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 )
 
 // Body resolves what an unguarded body-sending command sends: the --body

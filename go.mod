@@ -6,7 +6,6 @@ require (
 	github.com/nats-io/nats.go v1.55.0
 	github.com/standards-lab/blobfs v0.7.0
 	github.com/standards-lab/blobfs/postgres v0.5.0
-	github.com/standards-lab/go-cli-sdk v0.2.0
 	github.com/standards-lab/go-core v0.10.0
 	github.com/standards-lab/go-database v0.10.0
 	github.com/standards-lab/go-database/postgres v0.5.0

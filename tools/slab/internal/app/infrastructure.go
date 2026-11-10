@@ -7,11 +7,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/standards-lab/go-cli-sdk"
 	"github.com/standards-lab/go-core/config"
-	"github.com/standards-lab/go-core/graph"
-	"github.com/standards-lab/go-core/lifecycle"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 	"github.com/JaimeStill/spike-graph/tools/slab/events"
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
@@ -51,15 +51,15 @@ const (
 // depends on it, never in [New] and never for a run that builds nothing.
 func defineInfrastructure(g *graph.Graph, n *Nodes, flags *rootFlags) {
 	n.LifecycleConfig = g.Define("lifecycle config", newLifecycleConfig)
-	n.Base = g.Define("base", newSetting(flags, "base", defaultBase, parseString))
-	n.Grafana = g.Define("grafana", newSetting(flags, "grafana", defaultGrafana, parseString))
-	n.Repo = g.Define("repo", newSetting(flags, "repo", "", parseString))
-	n.NoColor = g.Define("no color", newSetting(flags, "no-color", false, strconv.ParseBool))
-	n.NATS = g.Define("nats", newSetting(flags, "nats", defaultNATS, parseString))
-	n.NATSStream = g.Define("nats stream", newSetting(flags, "nats-stream", defaultNATSStream, parseString))
-	n.NATSPrefix = g.Define("nats prefix", newSetting(flags, "nats-prefix", defaultNATSPrefix, parseString))
-	n.Client = g.Define("client", newClient(n.Base))
-	n.Broker = g.Define("broker", newBroker(n.NATS, n.NATSStream, n.NATSPrefix))
+	n.Base = g.Define("base", flags.setting("base", defaultBase, parseString))
+	n.Grafana = g.Define("grafana", flags.setting("grafana", defaultGrafana, parseString))
+	n.Repo = g.Define("repo", flags.setting("repo", "", parseString))
+	n.NoColor = g.Define("no color", flags.setting("no-color", false, strconv.ParseBool))
+	n.NATS = g.Define("nats", flags.setting("nats", defaultNATS, parseString))
+	n.NATSStream = g.Define("nats stream", flags.setting("nats-stream", defaultNATSStream, parseString))
+	n.NATSPrefix = g.Define("nats prefix", flags.setting("nats-prefix", defaultNATSPrefix, parseString))
+	n.Client = g.Define("client", n.newClient)
+	n.Broker = g.Define("broker", n.newBroker)
 }
 
 // newLifecycleConfig reads the lifecycle configuration, the shutdown
@@ -72,14 +72,14 @@ func newLifecycleConfig(*graph.Scope) (lifecycle.Config, error) {
 	return cfg, err
 }
 
-// newSetting returns the constructor of the run setting the root flag name
+// setting returns the constructor of the run setting the root flag name
 // overrides: it starts from def, replaces it with the variable composed
 // from envPrefix and name, such as SLAB_BASE for "base" or SLAB_NO_COLOR
 // for "no-color", when that is set and non-empty, parsing it with parse,
 // and replaces that with the flag's value when the dispatch set the flag.
 // An unparsable variable is an error naming it. It reads only when a Build
 // reaches the node.
-func newSetting[T any](flags *rootFlags, name string, def T, parse func(string) (T, error)) func(*graph.Scope) (T, error) {
+func (f *rootFlags) setting[T any](name string, def T, parse func(string) (T, error)) func(*graph.Scope) (T, error) {
 	return func(*graph.Scope) (T, error) {
 		v := def
 		variable := config.EnvName(envPrefix, name)
@@ -91,7 +91,7 @@ func newSetting[T any](flags *rootFlags, name string, def T, parse func(string) 
 			}
 			v = parsed
 		}
-		if given, ok := flags.value(name); ok {
+		if given, ok := f.value(name); ok {
 			v = given.(T)
 		}
 		return v, nil
@@ -145,24 +145,20 @@ func (f *rootFlags) value(name string) (any, bool) {
 	return f.fs.Lookup(name).Value.(flag.Getter).Get(), true
 }
 
-// newClient returns the client node's constructor: the HTTP client to the
-// service, bound to the URL the base node resolves.
-func newClient(base *graph.Node[string]) func(*graph.Scope) (*httpx.Client, error) {
-	return func(s *graph.Scope) (*httpx.Client, error) {
-		return httpx.NewClient(s.Use(base)), nil
-	}
+// newClient constructs the HTTP client to the service, bound to the URL
+// the base node resolves.
+func (n *Nodes) newClient(s *graph.Scope) (*httpx.Client, error) {
+	return httpx.NewClient(s.Use(n.Base)), nil
 }
 
-// newBroker returns the broker node's constructor: the NATS broker on the
-// server the nats node names, bound as a non-owner to the stream and prefix
-// the nats stream and nats prefix nodes name. It does no I/O; the
-// dispatcher starts it, connecting and binding the stream, before the
-// command runs, and drains it when the command returns. A setting nats.New
-// refuses, such as a stream name that is not a token, fails the Build.
-func newBroker(url, stream, prefix *graph.Node[string]) func(*graph.Scope) (*events.Broker, error) {
-	return func(s *graph.Scope) (*events.Broker, error) {
-		return events.NewBroker(s.Use(url), s.Use(stream), s.Use(prefix))
-	}
+// newBroker constructs the NATS broker on the server the nats node names,
+// bound as a non-owner to the stream and prefix the nats stream and nats
+// prefix nodes name. It does no I/O; the dispatcher starts it, connecting
+// and binding the stream, before the command runs, and drains it when the
+// command returns. A setting nats.New refuses, such as a stream name that
+// is not a token, fails the Build.
+func (n *Nodes) newBroker(s *graph.Scope) (*events.Broker, error) {
+	return events.NewBroker(s.Use(n.NATS), s.Use(n.NATSStream), s.Use(n.NATSPrefix))
 }
 
 // outputSource returns the output.Source a command family on the tree

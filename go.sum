@@ -77,8 +77,6 @@ github.com/standards-lab/blobfs v0.7.0 h1:f7Unfg+2OfCJlLGjGKS1iiVVn7EIVrsIuS0eCb
 github.com/standards-lab/blobfs v0.7.0/go.mod h1:TPVserSOd5D6G/G1s9eIFy3Ta6vvZzBEBnwB15FYBq4=
 github.com/standards-lab/blobfs/postgres v0.5.0 h1:zraAvKGkg6uNhXKFl2dyqZPq1OUMh8poATPQFbQDcRY=
 github.com/standards-lab/blobfs/postgres v0.5.0/go.mod h1:gKk9NElMtKdXCbHlAdEiJNxT1pz2G1y1QrBb/xLwpwM=
-github.com/standards-lab/go-cli-sdk v0.2.0 h1:MrIkdYqtBsOqV5Dw+CLk4JbPmiKv6xYgZ7hk8M3Ts68=
-github.com/standards-lab/go-cli-sdk v0.2.0/go.mod h1:Oga+KQsA8FQyqZ0bQjJqc+9Rp2J78LBDkBCQiI7yLAU=
 github.com/standards-lab/go-core v0.10.0 h1:Sb5xuyl/j+7bRwFXegXkEa8CnDUQ4Kz7/vWDogjDptg=
 github.com/standards-lab/go-core v0.10.0/go.mod h1:Yl/R+gM9YWczsePBCKXdPGh3FSdZ/5i8SapLIh3BDHU=
 github.com/standards-lab/go-database v0.10.0 h1:m/+X1TTH5/KCDJZRVLrVqrO7otE1XS3XoHj7HnzG2Ic=

@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/standards-lab/go-cli-sdk"
 	"github.com/standards-lab/go-core/process"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/app"
 )
 
