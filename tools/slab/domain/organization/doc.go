@@ -13,7 +13,7 @@
 //   - [CreateOrganization], [EditOrganization], and [TransferOrganization],
 //     the command bodies
 //   - [Organization], [Page], and [Identity], the replies
-//   - [Commands], which builds the org command on go-cli-sdk over the
+//   - [Commands], which builds the org command on sdk/cli over the
 //     client node and the output source the composition root gives it
 //
 // The package has one file per role. entities.go restates the wire types the

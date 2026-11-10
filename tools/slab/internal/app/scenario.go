@@ -48,7 +48,7 @@ func (n *Nodes) newGrafanaUp(s *graph.Scope) (scenarios.Grafana, error) {
 	return scenarios.Grafana{URL: url, Mimir: httpx.NewMimir(httpx.NewClient(url))}, nil
 }
 
-// mountScenarios mounts go-cli-sdk's scenario parent at root, with one leaf
+// mountScenarios mounts sdk/cli/scenario's parent at root, with one leaf
 // per scenario the scenarios package builds over the nodes from n it
 // reads, and sets root's Footer to the same listing the parent's help ends
 // with, so root help ends with it too. Each leaf declares its own

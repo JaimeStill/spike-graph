@@ -8,7 +8,7 @@
 // here, beside output, for each to import. Neither body function touches
 // the request; a command passes what it returns to its client.
 //
-// The functions read from go-cli-sdk's Invocation whether each flag was
+// The functions read from sdk/cli's Invocation whether each flag was
 // given, and a command calls them from its Validate, so input they refuse
 // is a usage error and nothing is built.
 //

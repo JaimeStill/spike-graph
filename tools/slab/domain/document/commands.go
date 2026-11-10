@@ -23,7 +23,7 @@ import (
 const octetStream = "application/octet-stream"
 
 // Commands builds the docs command with a dirs group and a files group, one
-// leaf per endpoint, on go-cli-sdk, and returns it alone in the slice the
+// leaf per endpoint, on sdk/cli, and returns it alone in the slice the
 // composition root mounts with root.Add(Commands(...)...). The docs command declares with Use the
 // two nodes every leaf below it needs, out's color node and client,
 // the HTTP client bound to the service's base URL; the dispatcher builds

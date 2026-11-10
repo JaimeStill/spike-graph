@@ -1,5 +1,5 @@
-// Package scenarios holds slab's narrated scenarios on go-cli-sdk's
-// scenario runner, each run as "slab scenario <name>". The package is
+// Package scenarios holds slab's narrated scenarios on
+// sdk/cli/scenario's runner, each run as "slab scenario <name>". The package is
 // built over the node handles the composition root hands it, in [Nodes]:
 // each scenario declares the nodes it reads, need nodes first and then the
 // settings, and its steps read their values from the invocation, so a

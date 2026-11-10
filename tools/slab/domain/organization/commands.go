@@ -17,7 +17,7 @@ import (
 )
 
 // Commands builds the org command with one subcommand per endpoint, on
-// go-cli-sdk, and returns it alone in the slice the composition root
+// sdk/cli, and returns it alone in the slice the composition root
 // mounts with root.Add(Commands(...)...). The org command declares with Use the two nodes every leaf
 // below it needs, out's color node and client, the HTTP client
 // bound to the service's base URL; the dispatcher builds them only when a

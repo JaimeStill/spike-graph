@@ -130,7 +130,7 @@ func TestRun_ParentWithNoSubcommand(t *testing.T) {
 	}
 }
 
-// Every usage error exits ExitUsage with go-cli-sdk's report on stderr,
+// Every usage error exits ExitUsage with sdk/cli's report on stderr,
 // before anything is built.
 func TestRun_UsageErrors(t *testing.T) {
 	for name, tc := range map[string]struct {

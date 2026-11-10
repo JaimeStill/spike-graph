@@ -12,7 +12,7 @@ import (
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
 )
 
-// Commands builds the database command, on go-cli-sdk: the schema
+// Commands builds the database command, on sdk/cli: the schema
 // subcommand over the migration operations, and one subcommand per
 // remaining endpoint, and returns it alone in the slice the composition
 // root mounts with admin.Add(Commands(...)...). The database command declares with Use the two nodes

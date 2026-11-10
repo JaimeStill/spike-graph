@@ -10,7 +10,7 @@ import (
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
 )
 
-// Commands builds the storage command, on go-cli-sdk, with one subcommand
+// Commands builds the storage command, on sdk/cli, with one subcommand
 // per endpoint, and returns it alone in the slice the composition root
 // mounts with admin.Add(Commands(...)...). The storage command declares with Use out's color
 // node and client, the HTTP client bound to the service's base URL, as the

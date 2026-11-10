@@ -6,7 +6,7 @@ import (
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"
 )
 
-// Source is how a command on go-cli-sdk reaches the Output it renders
+// Source is how a command on sdk/cli reaches the Output it renders
 // through. Node is the graph node the color setting is read from, which
 // the command declares with Use; New constructs the run's Output over the
 // invocation's streams, reading that node, so it is called from the
