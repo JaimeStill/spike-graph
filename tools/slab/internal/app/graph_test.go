@@ -73,15 +73,18 @@ func layerError(sys *graph.System, format string, args ...any) error {
 // Every scenario slab registers builds, from the nodes it declares and the
 // lifecycle config node, the set the dispatcher builds for its leaf, a
 // System that drops no order and puts grafana up above service whenever it
-// holds both. The scenarios are the registered set, not a list copied
-// here, so a scenario added later is checked too.
+// holds both. The scenarios are scenarios.All over the App's nodes, the set
+// the composition root mounts, not a list copied here, so a scenario added
+// later is checked too.
 func TestGraph_ScenarioLayers(t *testing.T) {
 	a := app.New(cli.Streams{})
 	n := a.Nodes()
-	all := app.Scenarios(a)
-	if len(all) == 0 {
-		t.Fatal("slab registers no scenarios")
-	}
+	all := scenarios.All(scenarios.Nodes{
+		Service:   n.Service,
+		GrafanaUp: n.GrafanaUp,
+		Repo:      n.Repo,
+		NoColor:   n.NoColor,
+	})
 	for _, s := range all {
 		t.Run(s.Name, func(t *testing.T) {
 			sys, err := a.Graph().Build(append(slices.Clone(s.Nodes), n.LifecycleConfig)...)
