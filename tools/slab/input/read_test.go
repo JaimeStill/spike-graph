@@ -7,8 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/standards-lab/go-cli-sdk"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 	"github.com/JaimeStill/spike-graph/tools/slab/input"
 )
 

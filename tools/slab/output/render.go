@@ -12,9 +12,9 @@ import (
 	"github.com/JaimeStill/spike-graph/tools/slab/style"
 )
 
-// Render writes one block of a scenario's narration, the form go-cli-sdk's
-// scenario.Reporter.Show takes: Show indents what it writes past the prose
-// and prints nothing when it fails. A block carries no caption; a step
+// Render writes one block of a scenario's narration, the form
+// sdk/cli/scenario's Reporter.Show takes: Show indents what it writes past
+// the prose and prints nothing when it fails. A block carries no caption; a step
 // prints the caption as a plain Note before the block, so only the block
 // itself is ever colored. Each constructor below takes the style the run
 // decided on, so the block is colored only when the run's color is on.

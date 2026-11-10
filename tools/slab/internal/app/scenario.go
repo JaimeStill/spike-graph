@@ -3,10 +3,9 @@ package app
 import (
 	"io"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-cli-sdk/scenario"
-	"github.com/standards-lab/go-core/graph"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/cli/scenario"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"
 	"github.com/JaimeStill/spike-graph/tools/slab/scenarios"
 )
@@ -21,29 +20,36 @@ import (
 // runs no step until it answers; a failed probe is reported
 // "startup: <node>: ..." naming the mise task that fixes it.
 //
-// grafana up is ordered After service. go-core's lifecycle starts a
-// System's nodes in layers by longest dependency path and stops at the
-// first layer with a failure, and grafana up, reading only the grafana
-// setting, would otherwise sit in a lower layer than service, which reads
-// base and client: with both down, Grafana's failure would be reported and
-// service's never probed. The After edge puts grafana up a layer above
-// service whenever both are in the System, so with nothing running the
-// failure names service and mise run serve. After builds nothing, so a
-// scenario that declares only grafana up would not gain service.
+// grafana up is ordered after service, by the After option at its Define.
+// The lifecycle starts a System's nodes in layers by longest dependency
+// path and stops at the first layer with a failure, and grafana up,
+// reading only the grafana setting, would otherwise sit in a lower layer
+// than service, which reads base and client: with both down, Grafana's
+// failure would be reported and service's never probed. The After edge
+// puts grafana up a layer above service whenever both are in the System,
+// so with nothing running the failure names service and mise run serve.
+// After builds nothing, so a scenario that declares grafana up must also
+// declare service: otherwise the Build drops the edge, and slab's layer
+// test fails.
 func defineScenarioNodes(g *graph.Graph, n *Nodes) {
-	base, client, grafana := n.Base, n.Client, n.Grafana
-	n.Service = g.Define("service", func(s *graph.Scope) (scenarios.Service, error) {
-		return scenarios.Service{URL: s.Use(base), Client: s.Use(client)}, nil
-	})
-	service := n.Service
-	n.GrafanaUp = g.Define("grafana up", func(s *graph.Scope) (scenarios.Grafana, error) {
-		s.After(service)
-		url := s.Use(grafana)
-		return scenarios.Grafana{URL: url, Mimir: httpx.NewMimir(httpx.NewClient(url))}, nil
-	})
+	n.Service = g.Define("service", n.newService)
+	n.GrafanaUp = g.Define("grafana up", n.newGrafanaUp, graph.After(n.Service))
 }
 
-// mountScenarios mounts go-cli-sdk's scenario parent at root, with one leaf
+// newService constructs the running service at the base node's URL, with
+// the client node's client bound to it.
+func (n *Nodes) newService(s *graph.Scope) (scenarios.Service, error) {
+	return scenarios.Service{URL: s.Use(n.Base), Client: s.Use(n.Client)}, nil
+}
+
+// newGrafanaUp constructs the running Grafana at the grafana node's URL,
+// with a Mimir client bound to it.
+func (n *Nodes) newGrafanaUp(s *graph.Scope) (scenarios.Grafana, error) {
+	url := s.Use(n.Grafana)
+	return scenarios.Grafana{URL: url, Mimir: httpx.NewMimir(httpx.NewClient(url))}, nil
+}
+
+// mountScenarios mounts sdk/cli/scenario's parent at root, with one leaf
 // per scenario the scenarios package builds over the nodes from n it
 // reads, and sets root's Footer to the same listing the parent's help ends
 // with, so root help ends with it too. Each leaf declares its own

@@ -8,9 +8,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-cli-sdk/scenario"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/cli/scenario"
 	"github.com/JaimeStill/spike-graph/tools/slab/admin/database"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/document"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/organization"

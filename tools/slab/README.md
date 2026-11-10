@@ -8,10 +8,10 @@ replacement for ad-hoc curl; the scenarios are the architect's own instrument fo
 colleagues and leadership on the workspace's progress, and a self-serve path in for anyone
 exploring it themselves.
 
-It is its own Go module, rooted here, so its command machinery never enters `cmd/server`'s
-dependency graph: go-cli-sdk, go-messaging's NATS provider and nats.go, which `events watch`
-reads the service's stream through, and the `golang.org/x/term` and `golang.org/x/sys` modules the
-`style` package detects a terminal with. Anyone with `go-web-service` cloned already has it.
+slab is a package tree of the repository's root module, with no `go.mod` of its own. Only slab
+imports its command machinery, the candidate `cli` and `scenario` packages under `sdk/cli` and
+the `golang.org/x/term` module the `style` package detects a terminal with, so none of it enters
+`cmd/server`'s build.
 
 [`usage.md`](usage.md) walks through every command by hand against the real running stack.
 
@@ -117,10 +117,10 @@ request and returns its result, unlike a scenario's narrated tour.
   with: mise run db:up): ...`; with NATS up but no stream, as before the service's first start,
   it names `mise run serve`. The `--nats*` root flags under [Configuration](#configuration) name
   the server, the stream, and the prefix.
-- **scenario** — `scenario <name>` runs one of the [scenarios](#scenarios) below on go-cli-sdk's
-  scenario runner, narrating each step to stdout. `scenario` alone prints its help, which ends
-  with the scenario listing, as the root's help does under `Scenarios:`. Neither reads any
-  configuration.
+- **scenario** — `scenario <name>` runs one of the [scenarios](#scenarios) below on the
+  `sdk/cli/scenario` runner, narrating each step to stdout. `scenario` alone prints its help,
+  which ends with the scenario listing, as the root's help does under `Scenarios:`. Neither reads
+  any configuration.
 - **version** — prints slab's version: the module version the binary was built at, or `(devel)`
   under `go run`. It reads no configuration.
 
@@ -244,10 +244,9 @@ variable named.
 A new scenario, command, or domain follows these rules. Each package's `doc.go` states the rules
 that are its own.
 
-- **Its own module.** slab's `go.mod` requires the workspace libraries it uses, go-cli-sdk among
-  them, never go-web-service's root module. The service has no release version, so a dependency
-  on it would pin a pseudo-version that goes stale in a fresh clone or CI; local cross-module
-  work goes through the gitignored `go.work`.
+- **Part of the root module.** slab builds against the root's `go.mod`, which reaches the
+  candidate packages under `sdk/` without a replace directive. Of the root module's packages, slab
+  imports only those candidate packages.
 - **The service's layout.** slab mirrors the service's layout. `internal/app` is the composition
   root, one file per layer, and the only package that constructs a dependency or names a mount.
   `cmd/slab` holds process entry and nothing else. `domain/<name>` is the client-side counterpart

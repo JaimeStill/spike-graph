@@ -20,7 +20,7 @@
 //   - [Decode], a message's event
 //   - [Render], an event as one block of output
 //   - [Commands], which builds the events command and its watch leaf on
-//     go-cli-sdk over the broker node
+//     sdk/cli over the broker node
 //
 // broker.go holds the broker, watch.go the watch and the decode, print.go
 // the rendering, and commands.go the command.

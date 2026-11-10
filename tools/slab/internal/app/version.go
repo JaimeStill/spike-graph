@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/standards-lab/go-cli-sdk"
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 )
 
 // versionCommand returns the version command, which prints the main

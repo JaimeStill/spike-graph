@@ -1,8 +1,7 @@
 package app
 
 import (
-	"github.com/standards-lab/go-cli-sdk"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/document"
 	"github.com/JaimeStill/spike-graph/tools/slab/domain/organization"
 )

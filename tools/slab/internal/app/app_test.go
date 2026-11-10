@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-core/graph"
-	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-core/process"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/app"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/apptest"
 )
@@ -130,7 +130,7 @@ func TestRun_ParentWithNoSubcommand(t *testing.T) {
 	}
 }
 
-// Every usage error exits ExitUsage with go-cli-sdk's report on stderr,
+// Every usage error exits ExitUsage with sdk/cli's report on stderr,
 // before anything is built.
 func TestRun_UsageErrors(t *testing.T) {
 	for name, tc := range map[string]struct {

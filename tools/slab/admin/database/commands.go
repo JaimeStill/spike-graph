@@ -5,15 +5,14 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/standards-lab/go-cli-sdk"
-	"github.com/standards-lab/go-core/graph"
-
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/tools/slab/httpx"
 	"github.com/JaimeStill/spike-graph/tools/slab/input"
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
 )
 
-// Commands builds the database command, on go-cli-sdk: the schema
+// Commands builds the database command, on sdk/cli: the schema
 // subcommand over the migration operations, and one subcommand per
 // remaining endpoint, and returns it alone in the slice the composition
 // root mounts with admin.Add(Commands(...)...). The database command declares with Use the two nodes

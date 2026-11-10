@@ -15,7 +15,7 @@ import (
 // decoded document, rendered whole. Its Error is the report, one member per
 // line: the status and title first, then the detail, the instance, the type
 // (unless it is about:blank, which says nothing), and each extension member
-// by name, in key order. go-cli-sdk's dispatcher prints a command's error
+// by name, in key order. sdk/cli's dispatcher prints a command's error
 // once, after "slab <path>: ", so a command on it returns the Report and the
 // whole document reaches stderr; web.Problem's own Error, one line of status
 // and detail, would drop the rest. Report unwraps to the web.Problem, so

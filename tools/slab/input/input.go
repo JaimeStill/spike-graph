@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/standards-lab/go-cli-sdk"
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 )
 
 // Body resolves what an unguarded body-sending command sends: the --body
@@ -35,7 +35,7 @@ func Body(inv *cli.Invocation, raw string, fromFlags func() (any, error)) ([]byt
 // way, because the wire type a guarded route decodes does not carry it and
 // the service decodes with unknown fields disallowed; a body without the
 // key is sent untouched. With neither source, the command is refused before
-// the request fires, in the words go-cli-sdk refuses a missing required
+// the request fires, in the words sdk/cli refuses a missing required
 // flag with. A command calls it from its Validate, as it does [Body].
 func GuardedBody(inv *cli.Invocation, raw string, version int64, fromFlags func() (any, error)) ([]byte, int64, error) {
 	flagged := inv.Changed("version")

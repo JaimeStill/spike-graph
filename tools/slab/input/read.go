@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/standards-lab/go-cli-sdk"
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 )
 
 // DefaultPageSize is the page size a collection read gets when it names

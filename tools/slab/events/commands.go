@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/standards-lab/go-cli-sdk"
 	"github.com/standards-lab/go-core/event"
-	"github.com/standards-lab/go-core/graph"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/tools/slab/output"
 )
 
@@ -16,7 +16,7 @@ import (
 // dispatcher prefixes the report of a command's failure.
 const commandPath = "slab events watch"
 
-// Commands builds the events command, on go-cli-sdk, with its one leaf,
+// Commands builds the events command, on sdk/cli, with its one leaf,
 // watch, and returns it alone in the slice the composition root mounts
 // with root.Add(Commands(...)...). The events command declares with Use
 // out's color node and broker, the NATS broker bound to the service's

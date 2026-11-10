@@ -15,7 +15,7 @@
 //   - [Directory], [DirectoryPage], [File], [FilePage], and [Identity], the
 //     replies
 //   - [AwaitSweep], which waits out a recursive delete
-//   - [Commands], which builds the docs command on go-cli-sdk over the
+//   - [Commands], which builds the docs command on sdk/cli over the
 //     client node and the output source the composition root gives it
 //
 // Every route sits under an organization's id, and a directory's id may be

@@ -1,5 +1,5 @@
 // Package app is the composition root. [New] describes slab's dependencies
-// as one go-core graph and builds the command tree on go-cli-sdk over it;
+// as one graph on sdk/graph and builds the command tree on sdk/cli over it;
 // [App.Run] dispatches the process arguments over that tree. The package is
 // one file per layer, so its table of contents is slab's layer list:
 //
@@ -22,7 +22,7 @@
 //   - scenario.go: defineScenarioNodes, the need nodes the scenarios
 //     declare (service and grafana up, each a lifecycle Starter that probes
 //     what it names before a scenario's first step), and mountScenarios,
-//     go-cli-sdk's scenario parent over the scenarios package, one leaf per
+//     sdk/cli/scenario's parent over the scenarios package, one leaf per
 //     scenario, each declaring the nodes it reads, and the root's help
 //     Footer, the same scenario listing the parent's help ends with;
 //   - version.go: the version command, which declares no nodes.
@@ -31,12 +31,13 @@
 // part of one Nodes value. Defining the nodes constructs nothing. A command
 // declares the nodes it needs with Use; the dispatcher builds them, with
 // the lifecycle configuration node, only when the command runs, and shuts
-// them down when it returns. A run that builds nothing, such as help, a
-// usage error, or version, reads no configuration. The root's PreRun
-// records which root flags a dispatch set, so a setting's node applies its
-// flag over its variable only when the flag was given. No aggregate
-// configuration gathers the settings: a command declares only the ones it
-// reads. Every command dispatches through go-cli-sdk.
+// them down when it returns, through sdk/lifecycle. A run that builds
+// nothing, such as help, a usage error, or version, reads no
+// configuration. The root's PreRun records which root flags a dispatch
+// set, so a setting's node applies its flag over its variable only when the
+// flag was given. No aggregate configuration gathers the settings: a
+// command declares only the ones it reads. Every command dispatches
+// through sdk/cli.
 //
 // The App publishes its composition: [App.Graph], [App.Nodes], and
 // [App.Root] return the graph, a handle on each of its nodes, and the

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/standards-lab/go-cli-sdk"
 	"github.com/standards-lab/go-core/process"
 
+	"github.com/JaimeStill/spike-graph/sdk/cli"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/app"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/apptest"
 	"github.com/JaimeStill/spike-graph/tools/slab/internal/termtest"
@@ -22,9 +22,9 @@ import (
 var sqlateBuilt = []string{"repo", "no color", "lifecycle config"}
 
 // The sqlate scenario needs nothing running, so it runs here end to end on
-// go-cli-sdk's runner, over the repository the test runs inside: it builds
-// the nodes it declares and nothing else, narrates its four steps, and
-// shows each authored source, each registration call, and the compiled
+// sdk/cli/scenario's runner, over the repository the test runs inside: it
+// builds the nodes it declares and nothing else, narrates its four steps,
+// and shows each authored source, each registration call, and the compiled
 // statement with its placeholders.
 func TestScenario_RunsSqlate(t *testing.T) {
 	a, stdout, stderr, built := newApp(t)
@@ -236,7 +236,7 @@ func TestScenario_WithNoScenarioPrintsItsHelpEndingInTheListing(t *testing.T) {
 }
 
 // The root's help ends with the same listing the scenario parent's help
-// ends with, word for word: both are go-cli-sdk's listing of the one
+// ends with, word for word: both are sdk/cli/scenario's listing of the one
 // scenario set.
 func TestScenario_RootHelpEndsWithTheScenarioListing(t *testing.T) {
 	unreadable(t)
@@ -259,7 +259,7 @@ func TestScenario_RootHelpEndsWithTheScenarioListing(t *testing.T) {
 	}
 }
 
-// Every usage error of scenario exits ExitUsage with go-cli-sdk's report on
+// Every usage error of scenario exits ExitUsage with sdk/cli's report on
 // stderr, before anything is built.
 func TestScenario_UsageErrors(t *testing.T) {
 	for name, tc := range map[string]struct {

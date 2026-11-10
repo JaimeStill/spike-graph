@@ -9,7 +9,7 @@
 //
 //   - [Storage], the route the admin service is mounted at
 //   - [Client] and [NewClient], one request per endpoint
-//   - [Commands], which builds the storage command on go-cli-sdk over the
+//   - [Commands], which builds the storage command on sdk/cli over the
 //     client node
 //
 // Neither endpoint takes a body, so the package has no entities.go.

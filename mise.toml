@@ -6,9 +6,9 @@ jq = "1.8.2"
 
 [env]
 APP_ENV = "local"
-# The repository's Go modules, as directories; tasks run in each one. The root module is the
-# copied go-web-service; slab is its own module under tools/.
-GO_MODULES = ". tools/slab"
+# The repository's Go modules, as directories; tasks run in each one. The root module is the only
+# one: it holds the copied go-web-service and slab, under tools/slab, together.
+GO_MODULES = "."
 
 # The spike's development stack runs beside go-web-service's on the same host, so every
 # host-published port moves off go-web-service's defaults here, and nowhere else: the copied
@@ -128,13 +128,12 @@ docker compose up -d --wait --build
 APP_DATABASE_PORT=$POSTGRES_PORT APP_STORAGE_ENDPOINT=http://127.0.0.1:$AZURITE_BLOB_PORT/devstoreaccount1 APP_NATS_URL=nats://127.0.0.1:$NATS_PORT go test -race -count=1 -tags integration ./integration/
 '''
 
-# slab is its own module under tools/ so go-cli-sdk and x/term never enter cmd/server's
-# dependency graph. Running from that directory, rather than passing through at the root, means a
-# clone without a go.work still resolves slab's dependencies against the published releases.
+# slab is a package tree of the root module, so it runs from the root against the root's go.mod.
+# x/term is a requirement of that module, but only slab imports it, so it never enters
+# cmd/server's build.
 [tasks.slab]
 description = "Run slab, the narrated-scenario runner (`mise run slab -- scenario <name>`)"
-dir = "tools/slab"
-run = "go run ./cmd/slab"
+run = "go run ./tools/slab/cmd/slab"
 
 # The development stacks: compose.yml's PostgreSQL, Azurite, and NATS (db:) and its observability
 # profile (otel:), whose data lives in named volumes that each group's down keeps and its reset
