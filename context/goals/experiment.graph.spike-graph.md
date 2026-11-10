@@ -144,6 +144,7 @@ slices 4/4 committed · standards done · spec — · editor —
 - web: the name check is a shared test helper in a candidate graph test package, with its own tests, so slab reuses it in the cli task.
 - web: the telemetry layer is defined first, ahead of infrastructure, so the connections can order after it; no group is forward-declared.
 - web: noted for adapters: the spike's copy has 14 wrapper constructors plus the plain newMeterProvider, not the design note's 17; the table counts from the spike's own diff.
+- web: escalation: a participant that fails at runtime is named in "service failed"; sdk/lifecycle labels each Monitored channel with its node's name. The fork diverges from v0.10.0 here, on purpose: sdk/lifecycle works out how lifecycle should evolve for go-core's release.
 
 ## Pending edits
 
