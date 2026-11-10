@@ -37,10 +37,11 @@ type App struct {
 // what the service is composed of. Each layer file's define function fills
 // its own part of one Nodes value, and its constructors read the lower
 // layers' nodes from that same value. Each node's name is its field's
-// name lowercased, which TestGraph_NodesNamedByTheirFields holds; it is
-// the name the lifecycle labels its errors with and the readiness probe
-// reports its check under. A value only one node uses is
-// built inside that node's constructor rather than as a node of its own.
+// name lowercased, spaced between words where the field joins them, as
+// "lifecycle config" is; it is the name the lifecycle labels its errors
+// with and the readiness probe reports its check under. A value only one
+// node uses is built inside that node's constructor rather than as a node
+// of its own.
 type Nodes struct {
 	// The App's inputs (app.go): the configuration and the logger's
 	// writer New was given, each the same value in every Build.

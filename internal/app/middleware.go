@@ -20,10 +20,9 @@ import (
 // telemetry node installs; it needs no value from that node, which is a
 // Build root, and the server sits above it through the connections, so
 // the providers are installed before the first request. RequestID sits
-// next, sourcing
-// the trace id observability.RequestIDSource reads off that span, so the id
-// RequestLogger records, the X-Request-Id response header, and any problem
-// document's request_id extension all carry the same value. Reordering any
+// next, sourcing the trace id observability.RequestIDSource reads off that
+// span, so the id RequestLogger records, the X-Request-Id response header,
+// and any problem document's request_id extension all carry the same value. Reordering any
 // of the three breaks that chain: tracing after RequestID leaves no span for
 // the source function to read, and RequestLogger before RequestID logs
 // before the id exists.

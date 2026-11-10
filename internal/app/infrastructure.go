@@ -28,9 +28,8 @@ import (
 // all read from the config node New defined. database is the database's
 // lifecycle object, the provider's pool with its start, readiness, and
 // shutdown, which the schema node administers; the domains never see it.
-// storage is the object
-// store itself, a lifecycle participant too, which the storage admin
-// domain administers. broker is the NATS JetStream broker the messaging
+// storage is the object store itself, a lifecycle participant too, which
+// the storage admin domain administers. broker is the NATS JetStream broker the messaging
 // runtime (reactors.go) publishes through, a lifecycle participant whose
 // readiness is its connection's. sql is the database as the domains see
 // it: the session over the same pool with the dialect, grouped with the
