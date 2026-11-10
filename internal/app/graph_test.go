@@ -19,6 +19,7 @@ import (
 	"github.com/JaimeStill/spike-graph/internal/app"
 	"github.com/JaimeStill/spike-graph/internal/config/configtest"
 	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/graph/graphtest"
 	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 )
 
@@ -583,6 +584,15 @@ func TestGraph_EachParticipantInOneNode(t *testing.T) {
 		}
 		held[d.Value] = d.Ref
 	}
+}
+
+// Each node's name is its Nodes field's name lowercased, so a field names
+// the node it holds without a comment repeating the name, and every field
+// holds a handle once New returns. "lifecycle config" passes as
+// LifecycleConfig: the check ignores the name's spaces.
+func TestGraph_NodesNamedByTheirFields(t *testing.T) {
+	a := app.New(configtest.Config(t), io.Discard)
+	graphtest.CheckNames(t, a.Nodes())
 }
 
 // Telemetry's Shutdown is safe when its Start never ran, as the
