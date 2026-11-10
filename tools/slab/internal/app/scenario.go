@@ -55,12 +55,18 @@ func (n *Nodes) newGrafanaUp(s *graph.Scope) (scenarios.Grafana, error) {
 // scenario's nodes, so a scenario builds and starts only what it reads;
 // the parent declares none, and writing the listing builds nothing.
 func mountScenarios(root *cli.Command, n *Nodes) {
-	all := scenarios.All(scenarios.Nodes{
+	all := scenariosOver(n)
+	root.Footer = func(w io.Writer) { scenario.WriteListing(w, all...) }
+	root.Add(scenario.Commands(all...)...)
+}
+
+// scenariosOver returns the scenarios the scenarios package builds over the
+// nodes from n they read: the set mountScenarios mounts, one leaf each.
+func scenariosOver(n *Nodes) []scenario.Scenario {
+	return scenarios.All(scenarios.Nodes{
 		Service:   n.Service,
 		GrafanaUp: n.GrafanaUp,
 		Repo:      n.Repo,
 		NoColor:   n.NoColor,
 	})
-	root.Footer = func(w io.Writer) { scenario.WriteListing(w, all...) }
-	root.Add(scenario.Commands(all...)...)
 }
