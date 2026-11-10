@@ -207,9 +207,8 @@ func TestRun_StartupFailureExitsOne(t *testing.T) {
 }
 
 // A monitored participant's runtime failure ends the run: Run logs
-// "service failed" with the error and returns 1 after the ready record.
-// The candidate lifecycle wraps a monitored failure "run:" without the
-// node's name, so the record carries the participant's own error.
+// "service failed" with the error, naming the failing node, and returns 1
+// after the ready record.
 func TestRun_RuntimeFailureExitsOne(t *testing.T) {
 	log := newRecords()
 	var stderr bytes.Buffer
@@ -225,8 +224,8 @@ func TestRun_RuntimeFailureExitsOne(t *testing.T) {
 		t.Errorf("Run = %d, want 1 on a runtime failure", code)
 	}
 	out := log.String()
-	if !strings.Contains(out, `msg="service failed"`) || !strings.Contains(out, "run: listener lost") {
-		t.Errorf("log = %q, want a service failure carrying the runtime error", out)
+	if !strings.Contains(out, `msg="service failed"`) || !strings.Contains(out, "run: server: listener lost") {
+		t.Errorf("log = %q, want a service failure naming the server node and its error", out)
 	}
 	if strings.Contains(out, "server stopped") {
 		t.Errorf("log = %q, want no stopped record after a failure", out)

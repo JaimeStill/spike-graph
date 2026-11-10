@@ -33,14 +33,17 @@ func (l *lazy) Start(context.Context) error {
 func (l *lazy) Err() <-chan error { return l.errs }
 
 // A monitored failure, from a Monitored value or a channel registered with
-// Monitor, cancels Exec's function and joins Exec's return wrapped "run:".
+// Monitor, cancels Exec's function and joins Exec's return wrapped "run:",
+// a Monitored value's labelled with its node's name and a registered
+// channel's, which has no node, with nothing more.
 func TestExec_MonitorFailureEndsFn(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		inferred bool
+		want     string
 	}{
-		{"Monitored", true},
-		{"Monitor", false},
+		{"Monitored", true, "run: source: consumer exploded"},
+		{"Monitor", false, "run: consumer exploded"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := make(source, 1)
@@ -70,8 +73,8 @@ func TestExec_MonitorFailureEndsFn(t *testing.T) {
 			if !sawCancel {
 				t.Error("fn's context was not cancelled by the monitored failure")
 			}
-			if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "run: consumer exploded") {
-				t.Errorf("Exec = %v, want the monitored failure wrapped \"run:\"", err)
+			if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("Exec = %v, want the monitored failure as %q", err, tc.want)
 			}
 			if !errors.Is(err, fnErr) {
 				t.Errorf("Exec = %v, want fn's error joined", err)
@@ -110,8 +113,8 @@ func TestRun_MonitoredValueFailureEndsRun(t *testing.T) {
 	errs <- sentinel
 
 	err := recvOrFail(t, done, "Run to return")
-	if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "run: subscription lost") {
-		t.Fatalf("Run = %v, want the monitored failure wrapped \"run:\"", err)
+	if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "run: source: subscription lost") {
+		t.Fatalf("Run = %v, want the monitored failure wrapped \"run:\" and naming its node", err)
 	}
 	if got := r.list(); !phased(got, []string{"start a"}, []string{"stop a"}) {
 		t.Errorf("events = %q, want a started then shut down", got)
@@ -183,7 +186,7 @@ func TestRun_MonitoredCancellationIsAFailure(t *testing.T) {
 	errs <- fmt.Errorf("stream: %w", context.Canceled)
 
 	err := recvOrFail(t, done, "Run to return")
-	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "run: stream:") {
-		t.Fatalf("Run = %v, want the monitored cancellation wrapped \"run:\"", err)
+	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "run: source: stream:") {
+		t.Fatalf("Run = %v, want the monitored cancellation wrapped \"run:\" and naming its node", err)
 	}
 }
