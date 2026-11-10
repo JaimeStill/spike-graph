@@ -135,6 +135,13 @@ APP_DATABASE_PORT=$POSTGRES_PORT APP_STORAGE_ENDPOINT=http://127.0.0.1:$AZURITE_
 description = "Run slab, the narrated-scenario runner (`mise run slab -- scenario <name>`)"
 run = "go run ./tools/slab/cmd/slab"
 
+# The adapters task's before/after: each composition root's production files and layer tests,
+# measured at the baseline commit, read from git without touching the checkout, and in the
+# working tree.
+[tasks.measure]
+description = "Compare the service's and slab's composition roots at the baseline commit against the working tree; writes nothing"
+run = "go run ./tools/measure"
+
 # The development stacks: compose.yml's PostgreSQL, Azurite, and NATS (db:) and its observability
 # profile (otel:), whose data lives in named volumes that each group's down keeps and its reset
 # drops. Each runs as the spike-graph project on [env]'s ports.
