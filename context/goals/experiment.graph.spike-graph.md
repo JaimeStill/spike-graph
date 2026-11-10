@@ -1,96 +1,16 @@
 # goal · experiment.graph.spike-graph
 
-- **State:** brief ready
-- **Task:** web
-- **Branch:** web
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] baseline
 2. [x] candidate
-3. [ ] web
+3. [x] web
 4. [ ] cli
 5. [ ] adapters
-
-## Task brief · web
-
-**Problem.** The candidate graph and lifecycle API is so far proven only by the candidate packages' own tests. go-web-service's real composition root still runs on go-core's graph:
-- order is set by `s.After` calls inside constructor bodies;
-- telemetry is pulled into the Build by a Use whose value is thrown away;
-- the reactors are a hand-kept list of roots;
-- 14 wrapper constructors and 6 closures exist only to reach handles or return fixed values;
-- 21 `// "name"` comments repeat the Define strings;
-- the layer tests copy Run's root list and match nodes by name;
-- a 30-line Run builds, runs, and reports by hand.
-
-Until this root runs on the candidate against the real stack, the intake can't say which of decisions 9–14 survive. It also can't settle three open details:
-- what `web.Run` returns, and who logs;
-- the rule the name check applies;
-- how a `*Nodes` method reaches a plain value.
-
-**Behaviors**
-
-1. The whole service builds and runs on the candidate graph and lifecycle packages, and no part of the service reaches go-core's graph. The unit tier and the integration tier pass against the spike's stack.
-2. Every edge that orders without passing a value is declared at its node's Define, and no constructor body orders anything:
-   - the database, the object store, and the broker order after telemetry;
-   - the sweeper and the relay order after the schema;
-   - the server orders after the reactors group and the schema.
-3. The sweeper and the relay are members of a reactors group. Telemetry is a root, so no constructor Uses it only to bring it into the Build.
-4. Node placement and readiness are unchanged:
-   - the server is alone in the top layer;
-   - telemetry sits beneath every other lifecycle participant;
-   - the database, the object store, and the broker share one layer beneath the schema;
-   - the sweeper and the relay sit above the schema, and the relay also sits above the broker;
-   - the readiness checks run in this order: database, storage, broker, schema, sweeper, relay;
-   - each lifecycle participant is the value of exactly one node.
-5. The telemetry layer is defined first, ahead of infrastructure, so the connections can order after it.
-6. Every constructor in the composition root is a method on the Nodes value or a plain function. No function returns a constructor.
-7. The configuration and the logger's writer are fixed-value nodes named "config" and "writer". The logger Uses the writer node, and its records reach the writer the App was created with.
-8. The readiness, the quiesce gate, and the nudge are fresh nodes, so each Build gets its own zero value. The readiness is the candidate lifecycle's Readiness, and the probes report the Coordinator it is bound to.
-9. A lifecycle-config node supplies the Coordinator's configuration from the config node's lifecycle block.
-10. The App publishes its root set: the server, the schema, telemetry, and the reactors group. Run builds exactly that set plus the lifecycle-config node. Building the published root set drops no ordering edge, so `Dropped()` is empty.
-11. The candidate `web.Run` takes a context, the graph, the lifecycle-config node, the logger node, the server node, and the roots. It returns the process exit code:
-    - once startup completes, it logs "server ready" once, on the logger node, with the address the server bound; on port 0 that is the assigned port;
-    - when the context ends after a clean drain, it logs "server stopped" and returns 0;
-    - when startup fails, or a monitored participant fails at runtime, it logs "service failed" on the logger node with an error that names the failing node, and returns 1; nothing reports ready;
-    - when the Build fails, it writes "service failed: <error>" to stderr, naming the failing node, and returns 1; it logs nothing and reports nothing ready, since the logger node may be what failed.
-12. App.Run is a single call to `web.Run`, and the App keeps no fallback logger. The server entrypoint passes its stderr through and returns Run's exit code. A second Run on one App panics before it builds anything.
-13. The layer tests read placement through the published root set, the System's layer of each handle, and the handles on each built node. A failing layer assertion prints the System's layer table. Each guard is shown to fail on a fixture that breaks it:
-    - a node defined above the server;
-    - a participant with no edge to telemetry;
-    - an ordering edge that orders nothing.
-14. A shared name-check test helper in a candidate graph test package takes a struct of node and group handles. It reports each exported handle field that holds no handle, and each one whose name, lowercased with spaces removed, differs from the field name lowercased. The helper's own tests show:
-    - it accepts web-style names ("meterprovider" for MeterProvider) and slab-style names ("nats stream" for NATSStream);
-    - it rejects a mismatched name and an undefined handle.
-15. The service's Nodes pass the name check, and the 21 `// "name"` comments are gone. No node is renamed, so the error labels and the readiness check names stay as they are.
-
-**Test seams.** The main seam is the App: New, its graph, its Nodes, its root set, and Run. The unit tier exercises it, and the integration tier exercises it through the built server binary. Two smaller seams have their own tests: `web.Run`, called directly on a small graph, and the name-check helper, called on fixture structs.
-
-**Slices** (no upgrade slice; the currency command reports nothing)
-
-1. **The root on the candidate.** The composition root, its fixtures, and its tests move onto the candidate packages, with Run still written by hand. Behaviors 1–10 hold, apart from Run's shape. Done when the check and the integration tier pass on the stack, and the service no longer reaches go-core's graph.
-2. **`web.Run`.** The candidate runner reports ready, failed, and stopped. App.Run becomes one call, and the entrypoint passes stderr through. Behaviors 11–12. Done when:
-   - `web.Run`'s own tests cover ready, clean stop, startup failure, runtime failure, and Build failure;
-   - the App's tests show the Build failure on stderr;
-   - the integration tier's ready-address, port-in-use, and drain cases pass.
-3. **Layer tests on handles.** The layer tests are rewritten on the root set, the layer of each handle, and the handles on built nodes. The old helpers that copied the root list and matched names are gone. Behavior 13, with behavior 4 pinned. Done when each guard fails on its breaking fixture and prints the layer table, `Dropped()` is empty for the full root set, and the check passes.
-4. **The name check.** The shared helper and its own tests, with the service's Nodes checked by it and the comments removed. Behaviors 14–15. Done when:
-   - the helper's tests pass for both naming styles and both failure cases;
-   - the service's name check passes, no `// "name"` comment remains, and the check passes.
-
-**Out of scope**
-- slab and the CLI fork, which belong to the `cli` task.
-- Arity adapters and the before/after measurement table, which belong to the `adapters` task.
-- Any change to node names, error labels, readiness names, or log record names, apart from the Build failure's move to stderr.
-- Changes outside the composition root, its fixtures, the entrypoint, and the code that runs a graph.
-- Changes to published go-web-sdk or go-core. go-core stays held at v0.10.0.
-- The intake findings already noted: concurrent Builds, Replace removing edges, Group.Members, String's ambiguity, and observer panics.
-
-**Door.** Two-way. Every change is code on a branch of the spike, measured against the baseline commit, and nothing is released.
-
-## Progress
-
-slices 4/4 committed · standards done · spec done · editor done
 
 ## Decisions
 
