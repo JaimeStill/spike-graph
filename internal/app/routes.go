@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-web-sdk"
+
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 )
 
 // routes is the list of mounts: the modules the router serves, each built

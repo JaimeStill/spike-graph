@@ -17,7 +17,9 @@
 //     Check
 //
 // The behavior is go-core v0.10.0's throughout, except that New panics on
-// go-core's *lifecycle.Readiness; what follows is its documentation.
+// go-core's *lifecycle.Readiness and a [Monitored] value's runtime failure
+// is labelled with its node's name, as startup and shutdown errors are;
+// what follows is its documentation.
 //
 // The package exports:
 //
@@ -141,7 +143,10 @@
 // completed: an Err channel is read then, so a value may create it in
 // Start. The first non-nil error any of them yields cancels the run
 // context, ending Exec's function or Run's serving, and joins Exec's or
-// Run's return wrapped "run:". A nil received error is ignored, and a
+// Run's return wrapped "run:". A Monitored value's failure is labelled with
+// its node's name inside that, as "run: <node>: <error>"; a channel
+// registered with Monitor belongs to no node, so its failure is wrapped
+// "run:" alone. A nil received error is ignored, and a
 // channel closing retires its watcher quietly: that is the expected end of
 // a source that stopped cleanly. A nil channel never yields, so it is not
 // watched.

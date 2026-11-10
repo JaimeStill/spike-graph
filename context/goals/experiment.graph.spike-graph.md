@@ -8,7 +8,7 @@
 
 1. [x] baseline
 2. [x] candidate
-3. [ ] web
+3. [x] web
 4. [ ] cli
 5. [ ] adapters
 
@@ -58,9 +58,36 @@
 - candidate: Dropped checks only the After refs of built nodes, in definition order and then declaration order; String doesn't show drops.
 - candidate: noted for web: After needs a handle defined earlier; telemetry is defined after database, so the root defines telemetry first or forward-declares a group; the root's layer test asserts Dropped() is empty for the full root set.
 - candidate: noted for intake: concurrent Builds race on Graph.built (documented, as in go-core); Replace can't remove an edge or membership; no Group.Members(); String is ambiguous for names with ", "; an observer's panic escapes Build.
+- web: `web.Run` logs "server ready", "service failed", and "server stopped" on the logger node and returns the exit code, as cli.Run does; a Build failure goes to stderr; it takes the lifecycle-config, logger, and server nodes and the roots; App.Run is one call, and App drops its fallback logger.
+- web: a `*Nodes` method reaches a plain value through a graph.Value node; the logger's writer is the "writer" node, which the logger Uses.
+- web: the name check's rule: a node's or group's name, lowercased with spaces removed, equals its Nodes field's name lowercased; no node is renamed.
+- web: the name check is a shared test helper in a candidate graph test package, with its own tests, so slab reuses it in the cli task.
+- web: the telemetry layer is defined first, ahead of infrastructure, so the connections can order after it; no group is forward-declared.
+- web: noted for adapters: the spike's copy has 14 wrapper constructors plus the plain newMeterProvider, not the design note's 17; the table counts from the spike's own diff.
+- web: escalation: a participant that fails at runtime is named in "service failed"; sdk/lifecycle labels each Monitored channel with its node's name. The fork diverges from v0.10.0 here, on purpose: sdk/lifecycle works out how lifecycle should evolve for go-core's release.
+- web: New defines the config and writer nodes in app.go, ahead of defineTelemetry; the lifecycle config node sits in infrastructure.go beside the logger.
+- web: `web.Run[S Server](ctx, g, lifecycleConfig, logger, server, roots, stderr) int`, with `Server` an `Addr() string` interface; App.Run(ctx, stderr) returns it, and the App keeps neither cfg nor w.
+- web: internal/app imports sdk/web as `sdkweb`, since go-web-sdk's package is also `web`.
+- web: web.Run panics through Get when roots don't reach the logger and the server; a Build's wiring panic doesn't reach stderr; a failed shutdown logs "service failed" and returns 1.
+- web: a channel registered with Monitor belongs to no node, so its failure stays "run: <err>".
+- web: graphtest exports NameErrors(nodes any) []error and CheckNames(t testing.TB, nodes any); a handle field is one whose type implements graph.Ref; a nil or zero-value handle reports "no handle"; a non-struct is one error.
+- web: apptest.ManualMeter keeps its Replace closure; it is a test substitute, not a wrapper constructor.
+- web: noted for intake: g.Value infers T from the argument's static type; Writer is a Node[io.Writer] only because New's w is an io.Writer.
+- web: noted for intake: telemetry is defined ahead of the logger it Uses, so definition order runs opposite to its Use; an After needs an earlier handle, and a Use doesn't.
+- web: noted for intake: an After that mixes a group and a node, `graph.After(n.Reactors, n.Schema)`, reads cleanly.
+- web: noted for intake: LayerOf panics for a non-member, so the layer guards scan Layers(); a Has(ref) or a LayerOf returning (int, bool) would serve them.
+- web: noted for intake: no System method lists the built nodes; the tests flatten Layers() with slices.Concat.
+- web: noted for intake: observers persist across Builds of one Graph, a trap for tests that build twice.
+- web: noted for intake: Dropped() is the only signal that a partial Build lost an After.
+- web: noted for intake: the runner takes four handles plus the roots; a promoted runner might take a struct or options.
+- web: noted for intake: the sealed exported Ref is a clean reflection seam for tooling such as graphtest.
+- web: noted for intake: graphtest relies on Define, Value, Fresh, and Group refusing the empty name, so only a zero-value literal has one; the refusal is part of the contract.
+- web: noted for intake: Fresh's per-Build zero value is proven by sdk/graph's tests, not by the service's.
+- web: noted for cli: slab's name check reuses sdk/graph/graphtest.
+- web: noted for cli: internal/config still imports go-core's lifecycle for Config, which sdk/lifecycle aliases.
 
 ## Pending edits
 
 - coordinator · experiment.graph intake: plan go-web-service's dependency upgrades to the versions spike-graph adopted in its baseline.
 - coordinator · roadmap: spike-graph's summary says lifecycle forks Coordinator, New, and Readiness, and the forks live under sdk/.
-
+- coordinator · roadmap: the candidate task's summary says `graph.Fresh`; it is the method `g.Fresh[T]`.
