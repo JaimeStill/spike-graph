@@ -10,6 +10,7 @@ import (
 
 	"github.com/JaimeStill/spike-graph/internal/app"
 	"github.com/JaimeStill/spike-graph/internal/config/configtest"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 )
 
 // The suite is hermetic: no live database or object store exists, so it
@@ -86,7 +87,7 @@ func TestRun_TwicePanics(t *testing.T) {
 	}
 
 	var built []string
-	a.Graph().Observe(func(name string) { built = append(built, name) })
+	a.Graph().Observe(func(r graph.Ref) { built = append(built, r.Name()) })
 	defer func() {
 		if recover() == nil {
 			t.Error("a second Run did not panic")

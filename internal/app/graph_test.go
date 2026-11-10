@@ -15,13 +15,13 @@ import (
 	"time"
 
 	libconfig "github.com/standards-lab/go-core/config"
-	"github.com/standards-lab/go-core/graph"
-	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-core/process/processtest"
 	"github.com/standards-lab/go-web-sdk"
 
 	"github.com/JaimeStill/spike-graph/internal/app"
 	"github.com/JaimeStill/spike-graph/internal/config/configtest"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
+	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
 )
 
 // This file pins the graph's structural properties the composition root
@@ -35,14 +35,13 @@ import (
 // App.Graph and App.Nodes, as does the Build-failure case, which
 // substitutes a failing constructor.
 
-// buildAsRun builds a's graph from the roots Run builds from, the config,
-// the logger, the server, the schema, and the reactors, plus extra.
+// buildAsRun builds a's graph from the roots Run builds from, the App's
+// root set and the lifecycle config node, plus extra.
 // TestGraph_ServerAloneInTopLayer holds these roots to Run's by observing a
 // real Run.
 func buildAsRun(t *testing.T, a *app.App, extra ...graph.Ref) *graph.System {
 	t.Helper()
-	n := a.Nodes()
-	roots := append([]graph.Ref{n.Config, n.Logger, n.Server, n.Schema}, n.Reactors...)
+	roots := append(a.Roots(), a.Nodes().LifecycleConfig)
 	sys, err := a.Graph().Build(append(roots, extra...)...)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
@@ -97,7 +96,7 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 		// Run reaches rather than a set this test chose. The context ends
 		// before startup, so the Run starts nothing.
 		ran := map[string]bool{}
-		a.Graph().Observe(func(name string) { ran[name] = true })
+		a.Graph().Observe(func(r graph.Ref) { ran[r.Name()] = true })
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		if code := a.Run(ctx); code != 0 {
@@ -137,19 +136,46 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 // /readyz reports them after "lifecycle". No other value is both: not the
 // nudge the document layer reaches the sweeper through, not the
 // messaging runtime, which starts nothing, and not the readiness node
-// itself.
+// itself. The readiness node the probes read is bound to the Coordinator
+// the System is handed to, so it reports that Coordinator's checks.
 func TestGraph_ReadinessChecks(t *testing.T) {
-	cfg := configtest.Config(t)
-	a := app.New(cfg, io.Discard)
+	a := app.New(configtest.Config(t), io.Discard)
+	n := a.Nodes()
 	sys := buildAsRun(t, a)
 
-	var got []string
-	for _, c := range lifecycle.New(sys, cfg.Config).Checks() {
-		got = append(got, c.Name)
+	checkNames := func(checks []lifecycle.Check) []string {
+		var out []string
+		for _, c := range checks {
+			out = append(out, c.Name)
+		}
+		return out
 	}
+	got := checkNames(lifecycle.New(sys, sys.Get(n.LifecycleConfig)).Checks())
 	want := []string{"database", "storage", "broker", "schema", "sweeper", "relay"}
 	if !slices.Equal(got, want) {
 		t.Errorf("checks = %v, want %v", got, want)
+	}
+	if probed := checkNames(sys.Get(n.Readiness).Checks()); !slices.Equal(probed, want) {
+		t.Errorf("readiness node checks = %v, want the Coordinator's %v", probed, want)
+	}
+}
+
+// A Build of the App's published root set drops no After: every node an
+// edge orders against, the schema and telemetry above all, is in the
+// System, and every reactor is in the group the server orders after. A
+// root missing from the set, or a reactor missing its In, fails here
+// instead of silently losing an order.
+func TestGraph_RootsDropNoOrder(t *testing.T) {
+	a := app.New(configtest.Config(t), io.Discard)
+	sys, err := a.Graph().Build(a.Roots()...)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if dropped := sys.Dropped(); len(dropped) != 0 {
+		for _, d := range dropped {
+			t.Errorf("%s's After of %s dropped", d.Node.Name(), d.After.Name())
+		}
+		t.Logf("layers:\n%s", sys)
 	}
 }
 

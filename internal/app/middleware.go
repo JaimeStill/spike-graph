@@ -1,11 +1,12 @@
 package app
 
 import (
-	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-observability"
 	"github.com/standards-lab/go-web-sdk"
 	mw "github.com/standards-lab/go-web-sdk/middleware"
 	"github.com/standards-lab/go-web-sdk/middleware/rate-limit"
+
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 )
 
 // middleware declares the router-level stack, outermost first. It reads
@@ -16,9 +17,10 @@ import (
 //
 // Tracing runs outermost so every later middleware, and the handler itself,
 // sees the request inside its span. It records to the providers the
-// telemetry node installs, so the stack Uses that node. That Use is what
-// brings telemetry into the Build: the connections' After edges to it
-// order them after it but never build it. RequestID sits next, sourcing
+// telemetry node installs; it needs no value from that node, which is a
+// Build root, and the server sits above it through the connections, so
+// the providers are installed before the first request. RequestID sits
+// next, sourcing
 // the trace id observability.RequestIDSource reads off that span, so the id
 // RequestLogger records, the X-Request-Id response header, and any problem
 // document's request_id extension all carry the same value. Reordering any
@@ -36,7 +38,6 @@ import (
 // and readiness probes are never rate-limited.
 func middleware(s *graph.Scope, n *Nodes) []web.Middleware {
 	cfg, logger := s.Use(n.Config), s.Use(n.Logger)
-	s.Use(n.Telemetry)
 	return []web.Middleware{
 		observability.NewMiddleware(observabilityConfig(cfg)),
 		mw.RequestID(mw.WithIDSource(observability.RequestIDSource)),

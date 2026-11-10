@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-database/sweep"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/JaimeStill/spike-graph/internal/app"
+	"github.com/JaimeStill/spike-graph/sdk/graph"
 )
 
 // ManualMeter replaces a's meter provider node's constructor with one that
