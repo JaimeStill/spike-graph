@@ -10,7 +10,7 @@
 2. [x] candidate
 3. [x] web
 4. [x] cli
-5. [ ] adapters
+5. [x] adapters
 
 ## Decisions
 
@@ -102,10 +102,43 @@
 - cli: noted for intake: cli.Command exposes no accessor for its children.
 - cli: noted for intake: nothing in sdk/cli reads System.Dropped, so only slab's layer test catches a scenario's dropped After.
 - cli: noted for adapters: slab's wrapper constructors are replaced: newSetting by flags.setting (7 settings), newClient and newBroker by *Nodes methods, and the service and grafana up Define closures by *Nodes methods.
+- adapters: no arity adapters; methods on `*Nodes` are the only constructor form. The architect's call: the Define-line changes already made the graph legible and fixed the reliability findings; defining nodes is revisited only if constructors become a problem. No adapter tier is written, so evidence 8 is decided, not measured.
+- adapters: the before/after measurement is a committed Go program on go/parser and go/ast, run by a mise task over the baseline commit (2999659) and the working tree.
+- adapters: "lines" is code lines (not blank, comment, or import) as the headline, with raw lines beside them.
+- adapters: each root's table counts production files; the layer tests are a row of their own.
+- adapters: sync deletes the spike's roadmap table, so the three "coordinator · roadmap" pending edits are dropped; the intake edit stays.
+- adapters: a code line is one a non-comment token touches, so every line of a raw string counts; import declarations' lines are then removed. Refines "lines is code lines".
+- adapters: a root's production files are its non-test .go files except doc.go.
+- adapters: a wrapper constructor is a func declaration whose one result is a func whose first parameter is *graph.Scope; a closure is any function literal.
+- adapters: a name comment is a comment on a field of the Nodes struct whose text opens with a quoted name; a quoted string in any other comment is not one.
+- adapters: an s.After site is an After call, inside a func body, on an identifier named like some *graph.Scope parameter in the file; names are matched without type checking, since a root names its scope s throughout.
+- adapters: the graph package is any import whose path ends in `graph`, under the file's local name, so go-core's at the baseline and sdk/graph's since both count.
+- adapters: each root's layer-test row is its graph_test.go, counted in code and raw lines only; slab's is absent at the baseline and counts zero.
+- adapters: measure runs git from the repository root (rev-parse --show-toplevel), so it prints the same tables from any directory.
+- adapters: the README's evidence cites a stack run only where a merged PR body records one; everything else is marked proven only by tests.
 
 ## Pending edits
 
 - coordinator · experiment.graph intake: plan go-web-service's dependency upgrades to the versions spike-graph adopted in its baseline.
-- coordinator · roadmap: spike-graph's summary says lifecycle forks Coordinator, New, and Readiness, go-cli-sdk's `scenario` is forked with `cli`, and the forks live under sdk/.
-- coordinator · roadmap: the candidate task's summary says `graph.Fresh`; it is the method `g.Fresh[T]`.
-- coordinator · roadmap: the cli task's summary says it folds slab into the root module and forks go-cli-sdk v0.2.0's `cli` and `scenario`.
+- coordinator · context/graph-ergonomics.md: the answer section under `## Answers · experiment.graph`:
+
+  ````markdown
+  ### Answer · experiment.graph.spike-graph
+
+  **Question:** Does the candidate API, on today's graph semantics, make go-web-service's composition root and slab's CLI shorter, and their layer placement legible, run against real infrastructure, with arity adapters and methods on `*Nodes` compared on one tier?
+
+  **Answer:** Yes: both real roots are shorter and their layer placement legible, with every node's layer stated at its Define line, no constructor body ordering anything, and the service root's wrapper constructors, closures, and name comments gone; arity adapters don't ship, so methods on `*Nodes` are the only constructor form.
+
+  1. The candidate `graph` and `lifecycle` packages: sdk/graph's and sdk/lifecycle's tests, go-core's ported and the candidate's own, under `mise run check`; both roots run on them.
+  2. The service on the candidate: internal/app's tests under `mise run check`; `mise run integration` passed on the spike-graph-integration stack (web task); the migrated service served slab's scenarios on the spike-graph stack (cli task).
+  3. `web.Run`: sdk/web's tests and internal/app's Run tests; the running service logged "server ready" (cli task); "service failed" and "server stopped" are proven only by tests.
+  4. slab migrated: `mise run slab` ran all six scenarios against the migrated service on the stack, all exiting 0 (cli task); help and usage errors building nothing is proven only by tests.
+  5. Layer tests on `Roots()`, `LayerOf`, and handles, with `Dropped()` empty: proven only by tests (internal/app's layer tests, slab's `TestGraph_ScenarioLayers`).
+  6. The name check: proven only by tests (`graphtest.CheckNames`, run on both roots' Nodes).
+  7. A `*Nodes` method reaches a plain value through a `graph.Value` node (the logger's "writer"): internal/app's tests; the running service logs through it.
+  8. Arity adapters: decided, not measured. The architect decided they don't ship: the Define-line changes already made the graph legible and fixed the reliability findings, so a second constructor form isn't worth its cost (one adapter per arity, a projection node or wrapper for each constructor that takes part of the config, no-error variants). No adapter tier was written.
+  9. Before/after, from `mise run measure` against baseline 2999659: service code lines 460 → 411, closures 21 → 0, wrapper constructors 14 → 0, name comments 21 → 0, `s.After` sites 7 → 0; slab code lines 207 → 202, closures 11 → 7, wrappers 3 → 1, name comments 12 → 0, `s.After` 1 → 0. Decisions 9, 10, 12, 13 kept; 11 and 14 changed; the open fork dropped.
+
+  [The answer](https://github.com/JaimeStill/spike-graph/blob/main/context/README.md#the-answer) ·
+  [spike-graph](https://github.com/JaimeStill/spike-graph)
+  ````
