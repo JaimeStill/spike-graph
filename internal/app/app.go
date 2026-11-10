@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/standards-lab/go-core/event"
-	"github.com/standards-lab/go-core/logging"
 	"github.com/standards-lab/go-core/reactor"
 	"github.com/standards-lab/go-database"
 	"github.com/standards-lab/go-database/admin"
@@ -23,16 +22,14 @@ import (
 	"github.com/JaimeStill/spike-graph/internal/config"
 	"github.com/JaimeStill/spike-graph/sdk/graph"
 	"github.com/JaimeStill/spike-graph/sdk/lifecycle"
+	sdkweb "github.com/JaimeStill/spike-graph/sdk/web"
 )
 
 // App is the application layer: the dependency graph that describes the
-// service, the [Nodes] that name its parts, and the configuration and log
-// writer it was described over.
+// service and the [Nodes] that name its parts.
 type App struct {
 	graph *graph.Graph
 	nodes Nodes
-	cfg   *config.Config
-	w     io.Writer
 	ran   bool
 }
 
@@ -95,7 +92,7 @@ type Nodes struct {
 // order themselves after its node at their Define, and an After takes a
 // handle already defined; every other layer follows lowest first.
 func New(cfg *config.Config, w io.Writer) *App {
-	a := &App{graph: graph.New(), cfg: cfg, w: w}
+	a := &App{graph: graph.New()}
 	a.nodes.Config = a.graph.Value("config", cfg)
 	a.nodes.Writer = a.graph.Value("writer", w)
 	defineTelemetry(a.graph, &a.nodes)
@@ -128,42 +125,23 @@ func (a *App) Roots() []graph.Ref {
 	return []graph.Ref{n.Server, n.Schema, n.Telemetry, n.Reactors}
 }
 
-// Run builds the graph, hands the System to a lifecycle Coordinator with
-// the lifecycle config node's value, and runs it until ctx ends, returning
-// the process exit code. The Build's roots are [App.Roots] and the
-// lifecycle config node, which Run reads; the logger and the server, which
-// Run reads too, are reached from the server. Once the
-// server has bound, the ready record names its address. Run logs "server
-// stopped" and returns 0 after a clean drain, or logs "service failed" with
-// the error and returns 1 on a Build, startup, runtime, or shutdown
-// failure. An App runs once: a second Run panics before it builds anything.
-func (a *App) Run(ctx context.Context) int {
+// Run runs the service with [web.Run], the candidate runner, and returns
+// the process exit code. It builds [App.Roots] and the lifecycle config
+// node, hands the System to a lifecycle Coordinator configured from that
+// node, and runs it until ctx ends; the logger and the server it reads are
+// reached from the server. Once the server has bound, the ready record
+// names its address. Run logs "server stopped" and returns 0 after a clean
+// drain, or logs "service failed" with the error and returns 1 on a
+// startup, runtime, or shutdown failure. A Build failure is written to
+// stderr instead, "service failed: " and the error, since the logger node
+// may be what failed. An App runs once: a second Run panics before it
+// builds anything.
+func (a *App) Run(ctx context.Context, stderr io.Writer) int {
 	if a.ran {
 		panic("app: Run called twice; an App runs once")
 	}
 	a.ran = true
 
 	n := a.nodes
-	sys, err := a.graph.Build(append(a.Roots(), n.LifecycleConfig)...)
-	if err != nil {
-		// The logger node may be what failed, so the Build failure is
-		// reported through a logger of Run's own over the same writer and
-		// log configuration.
-		logging.New(a.w, a.cfg.Log).Error("service failed", "error", err)
-		return 1
-	}
-
-	logger := sys.Get(n.Logger)
-	server := sys.Get(n.Server)
-	lc := lifecycle.New(sys, sys.Get(n.LifecycleConfig))
-	lc.OnReady(func() {
-		logger.Info("server ready", "addr", server.Addr())
-	})
-
-	if err := lc.Run(ctx); err != nil {
-		logger.Error("service failed", "error", err)
-		return 1
-	}
-	logger.Info("server stopped")
-	return 0
+	return sdkweb.Run(ctx, a.graph, n.LifecycleConfig, n.Logger, n.Server, a.Roots(), stderr)
 }

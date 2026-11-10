@@ -39,11 +39,12 @@
 // and its handles, so a caller can Observe or Replace a node before Run,
 // as internal/apptest's fixtures do, and [App.Roots] publishes the root
 // set: the server, the schema, telemetry, and the reactors group. [App.Run]
-// is the hot start plus shutdown: it builds the root set and the lifecycle
-// config node, hands the System to the lifecycle Coordinator configured
-// from that node, and returns the process exit code. A constructor's error
-// is reported there as the service failing; a wiring mistake panics during
-// Build or, for an option, at Define.
+// is the hot start plus shutdown, a single call to the candidate runner
+// (sdk/web): it builds the root set and the lifecycle config node, hands
+// the System to the lifecycle Coordinator configured from that node, and
+// returns the process exit code. A constructor's error is reported there,
+// on the stderr Run is given, as the service failing; a wiring mistake
+// panics during Build or, for an option, at Define.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both,

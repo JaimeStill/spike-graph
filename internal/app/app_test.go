@@ -3,6 +3,10 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -48,13 +52,15 @@ func (b *syncBuffer) String() string {
 // draining to exit 1 with the failure named in the log, never flipping
 // readiness. The database, the object store, and the broker start
 // together, and the first to fail cancels the others, so the log names
-// whichever failed first.
+// whichever failed first. The failure is the log's alone: nothing goes to
+// stderr, which only a Build failure reaches.
 func TestRun_FailsStartupWithoutInfrastructure(t *testing.T) {
 	buf := &syncBuffer{}
+	stderr := &syncBuffer{}
 	a := app.New(configtest.Config(t), buf)
 
 	done := make(chan int, 1)
-	go func() { done <- a.Run(context.Background()) }()
+	go func() { done <- a.Run(context.Background(), stderr) }()
 
 	select {
 	case code := <-done:
@@ -72,6 +78,37 @@ func TestRun_FailsStartupWithoutInfrastructure(t *testing.T) {
 	if strings.Contains(out, "server ready") {
 		t.Error("log carries a ready record despite the failed startup")
 	}
+	if got := stderr.String(); got != "" {
+		t.Errorf("stderr = %q, want nothing on a startup failure", got)
+	}
+}
+
+// A constructor's error fails Run's Build: Run returns 1 and writes the
+// failure to stderr, "service failed: " and the error labelled with the
+// failing node's name, and logs nothing, since the node that failed may be
+// the logger itself. Nothing reports ready.
+func TestRun_BuildFailureOnStderr(t *testing.T) {
+	log := &syncBuffer{}
+	stderr := &syncBuffer{}
+	a := app.New(configtest.Config(t), log)
+	a.Graph().Replace(a.Nodes().Logger, func(*graph.Scope) (*slog.Logger, error) {
+		return nil, errors.New("logger unavailable")
+	})
+
+	// Cancelled up front, so a Build that wrongly succeeds drains at once
+	// and fails the exit-code check instead of hanging.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if code := a.Run(ctx, stderr); code != 1 {
+		t.Errorf("Run = %d, want 1", code)
+	}
+	failure := regexp.MustCompile(`^service failed: [^\n]*logger[^\n]*logger unavailable\n$`)
+	if got := stderr.String(); !failure.MatchString(got) {
+		t.Errorf("stderr = %q, want a service failure naming the logger node and its error", got)
+	}
+	if out := log.String(); out != "" {
+		t.Errorf("log = %q, want nothing", out)
+	}
 }
 
 // An App runs once. Run reports a Build or lifecycle failure as an exit
@@ -82,7 +119,7 @@ func TestRun_TwicePanics(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if code := a.Run(ctx); code != 0 {
+	if code := a.Run(ctx, io.Discard); code != 0 {
 		t.Fatalf("first Run = %d, want 0 on a context ended before startup", code)
 	}
 
@@ -96,5 +133,5 @@ func TestRun_TwicePanics(t *testing.T) {
 			t.Errorf("the second Run built %v before it panicked, want nothing", built)
 		}
 	}()
-	_ = a.Run(ctx)
+	_ = a.Run(ctx, io.Discard)
 }

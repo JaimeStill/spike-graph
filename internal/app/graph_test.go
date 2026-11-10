@@ -2,9 +2,7 @@ package app_test
 
 import (
 	"context"
-	"errors"
 	"io"
-	"log/slog"
 	"maps"
 	"net"
 	"regexp"
@@ -99,7 +97,7 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 		a.Graph().Observe(func(r graph.Ref) { ran[r.Name()] = true })
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		if code := a.Run(ctx); code != 0 {
+		if code := a.Run(ctx, io.Discard); code != 0 {
 			t.Fatalf("Run = %d, want 0", code)
 		}
 		ranNames := slices.Sorted(maps.Keys(ran))
@@ -559,33 +557,5 @@ func TestTelemetry_ShutdownWithoutStart(t *testing.T) {
 	}
 	if out := log.String(); out != "" {
 		t.Errorf("log = %q, want nothing", out)
-	}
-}
-
-// A constructor's error fails Run's Build: Run returns 1 and logs the
-// failure, labelled with the failing node's name, through a logger of its
-// own, since the node that failed may be the logger itself. Nothing reports
-// ready.
-func TestRun_BuildFailureExitsOne(t *testing.T) {
-	var log syncBuffer
-	a := app.New(configtest.Config(t), &log)
-	a.Graph().Replace(a.Nodes().Logger, func(*graph.Scope) (*slog.Logger, error) {
-		return nil, errors.New("logger unavailable")
-	})
-
-	// Cancelled up front, so a Build that wrongly succeeds drains at once
-	// and fails the exit-code check instead of hanging.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	if code := a.Run(ctx); code != 1 {
-		t.Errorf("Run = %d, want 1", code)
-	}
-	out := log.String()
-	failure := regexp.MustCompile(`msg="service failed" error="[^"]*logger[^"]*logger unavailable`)
-	if !failure.MatchString(out) {
-		t.Errorf("log = %q, want a service failure naming the logger node and its error", out)
-	}
-	if strings.Contains(out, "server ready") {
-		t.Errorf("log = %q, want no ready record", out)
 	}
 }
