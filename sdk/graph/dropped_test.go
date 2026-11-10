@@ -92,12 +92,11 @@ func TestDropped_IsInDefinitionThenAfterOrder(t *testing.T) {
 		"api after db", "api after workers",
 		"server after cache", "server after workers", "server after db",
 	}
-	for range 20 {
-		if got := dropNames(sys.Dropped()); !slices.Equal(got, want) {
-			t.Fatalf("Dropped() = %v, want %v", got, want)
-		}
+	if got := dropNames(sys.Dropped()); !slices.Equal(got, want) {
+		t.Fatalf("Dropped() = %v, want %v", got, want)
 	}
-	// Each Build of the same roots reports the same order.
+	// Each Build of the same roots reports the same order, whatever order
+	// the Build's map of entries iterates in.
 	for range 20 {
 		if got := dropNames(mustBuild(t, g, h.server, h.api).Dropped()); !slices.Equal(got, want) {
 			t.Fatalf("Dropped() = %v, want %v", got, want)
@@ -119,9 +118,6 @@ func TestDropped_CarriesTheHandles(t *testing.T) {
 	// Interface equality: the very handles Define and Group returned.
 	if !slices.Equal(got, want) {
 		t.Fatalf("Dropped() = %v, want %v", dropNames(got), dropNames(want))
-	}
-	if got[0].Node != graph.Ref(h.api) || got[2].After != graph.Ref(h.cache) {
-		t.Fatalf("the drops do not carry the handles")
 	}
 	// The Node asserts back to the typed handle, as a Dependency's Ref does.
 	if n, ok := got[2].Node.(*graph.Node[int]); !ok || n != h.server {
