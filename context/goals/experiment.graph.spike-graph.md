@@ -90,7 +90,7 @@ Until this root runs on the candidate against the real stack, the intake can't s
 
 ## Progress
 
-slices 4/4 committed · standards — · spec — · editor —
+slices 4/4 committed · standards done · spec — · editor —
 
 ## Decisions
 
