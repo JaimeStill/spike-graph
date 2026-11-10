@@ -34,7 +34,7 @@ func layered() (g *graph.Graph, h struct {
 	h.cfg = g.Define("cfg", func(*graph.Scope) (int, error) { return 1, nil })
 	h.clock = g.Value("clock", "tick")
 	h.seed = g.Value("seed", 7)
-	h.gate = graph.Fresh[bool](g, "gate")
+	h.gate = g.Fresh[bool]("gate")
 	h.lonely = g.Define("lonely", func(*graph.Scope) (int, error) { return 0, nil })
 	h.cache = g.Define("cache", func(s *graph.Scope) (int, error) { return s.Use(h.cfg), nil }, graph.In(h.tier))
 	h.db = g.Define("db", func(s *graph.Scope) (int, error) { return s.Use(h.cfg) + s.Use(h.seed), nil }, graph.In(h.tier))

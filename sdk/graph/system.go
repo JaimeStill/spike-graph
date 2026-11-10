@@ -20,7 +20,7 @@ type System struct {
 type Dependency struct {
 	Name  string
 	Value any
-	// Ref is the handle [Graph.Define], [Graph.Value], or [Fresh] returned
+	// Ref is the handle [Graph.Define], [Graph.Value], or [Graph.Fresh] returned
 	// for the node, so dep.Ref == graph.Ref(handle) holds and a test
 	// compares handles rather than names.
 	Ref Ref

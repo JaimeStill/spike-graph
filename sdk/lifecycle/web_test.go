@@ -39,7 +39,7 @@ func get(t *testing.T, url string) int {
 // the Coordinator, and it shuts down when Run's context ends.
 func TestRun_ServesAGoWebSDKServer(t *testing.T) {
 	g := graph.New()
-	readiness := graph.Fresh[lifecycle.Readiness](g, "readiness")
+	readiness := g.Fresh[lifecycle.Readiness]("readiness")
 	server := g.Define("server", func(s *graph.Scope) (*web.Server, error) {
 		mux := http.NewServeMux()
 		web.RegisterHealth(mux, s.Use(readiness), web.Problem{})

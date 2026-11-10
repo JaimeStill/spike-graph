@@ -13,9 +13,9 @@
 //   - [Graph.Define], which adds a node with its constructor and its
 //     options, and runs nothing
 //   - [Graph.Value], which adds a node whose value is a given value in
-//     every Build, and [Fresh], which adds a node whose value is a new zero
-//     pointer in each Build; both take no options and return a Node like
-//     Define's
+//     every Build, and [Graph.Fresh], which adds a node whose value is a new
+//     zero pointer in each Build; both take Define's options and return a
+//     Node like Define's
 //   - [Option], which places a node at Define: [After], which orders it
 //     after nodes or groups without their values, and [In], which makes it
 //     a member of a group
@@ -51,7 +51,7 @@
 // a Use is never constructed, so a Build of a subset of the roots brings up
 // only that subset's dependencies. Each Build is independent and constructs
 // fresh values: a [Graph.Value] node's value is the same v in every Build,
-// and a [Fresh] node's is a new zero pointer in each, so a value a run
+// and a [Graph.Fresh] node's is a new zero pointer in each, so a value a run
 // mutates starts zero in the next System.
 //
 // # Order and groups
@@ -78,7 +78,7 @@
 // # Introspection
 //
 // What a Build reports names a node by its handle, the *Node[T] that
-// [Graph.Define], [Graph.Value], or [Fresh] returned, so a test compares
+// [Graph.Define], [Graph.Value], or [Graph.Fresh] returned, so a test compares
 // handles rather than names: [Dependency.Ref] is that handle, as is the
 // [Ref] an observer added by [Graph.Observe] receives, and
 // [System.LayerOf] takes one and returns the node's layer, numbered as
@@ -104,10 +104,9 @@
 // Build, a Get or LayerOf of a node not in the System, a LayerOf of a
 // group, which has no layer, a nil constructor, option, or observer, a nil
 // ref given to After, In, Build, or LayerOf, and an empty or duplicate
-// name, nodes and groups sharing one name space. Define checks its options,
-// for a nil ref or one defined on another Graph, before it changes the
-// Graph. A cycle
-// closed by an order-only edge, through a group included, panics at Build
+// name, nodes and groups sharing one name space. Define, Value, and Fresh
+// check their options, for a nil ref or one defined on another Graph,
+// before they change the Graph. A cycle closed by an order-only edge, through a group included, panics at Build
 // with its path. Build checks its roots, for a nil ref or one defined on
 // another Graph, before it constructs any of them, so a mistake in any root
 // panics before a constructor runs.

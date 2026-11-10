@@ -50,22 +50,25 @@ func (g *Graph) Define[T any](name string, ctor func(*Scope) (T, error), opts ..
 
 // Value defines a node named name whose value is v in every Build, and
 // returns its handle, a [Node] like any Define returns: a Use target, a
-// root, an [After] target, and replaceable. Every Build's value is v
-// itself, so a pointer or map v is shared across Builds. Value panics as
-// [Graph.Define] does: once g has run a Build, or when name is empty or
-// already defined on g, the message naming Value.
-func (g *Graph) Value[T any](name string, v T) *Node[T] {
-	return define(g, "Value", name, func(*Scope) (T, error) { return v, nil }, nil)
+// root, an [After] target, and replaceable. It takes Define's options:
+// [After] orders the node after other nodes or groups, and [In] makes it a
+// member of a group. Every Build's value is v itself, so a pointer or map v
+// is shared across Builds. A lifecycle participant or a Readiness therefore
+// belongs in [Graph.Fresh] or [Graph.Define], not Value: every System would
+// start and stop the one shared value. Value panics as [Graph.Define] does,
+// the message naming Value, and checks every option before it changes g.
+func (g *Graph) Value[T any](name string, v T, opts ...Option) *Node[T] {
+	return define(g, "Value", name, func(*Scope) (T, error) { return v, nil }, opts)
 }
 
-// Fresh defines a node named name on g whose value is a new zero *T in
-// each Build, and returns its handle, a [Node] like any Define returns. Two
-// Builds give two distinct pointers, so a value a run mutates, a readiness
-// flag or a gate, starts zero in every System. Fresh panics as
-// [Graph.Define] does: once g has run a Build, or when name is empty or
-// already defined on g, the message naming Fresh.
-func Fresh[T any](g *Graph, name string) *Node[*T] {
-	return define(g, "Fresh", name, func(*Scope) (*T, error) { return new(T), nil }, nil)
+// Fresh defines a node named name whose value is a new zero *T in each
+// Build, and returns its handle, a [Node] like any Define returns. It takes
+// Define's options, [After] and [In]. Two Builds give two distinct
+// pointers, so a value a run mutates, a readiness flag or a gate, starts
+// zero in every System. Fresh panics as [Graph.Define] does, the message
+// naming Fresh, and checks every option before it changes g.
+func (g *Graph) Fresh[T any](name string, opts ...Option) *Node[*T] {
+	return define(g, "Fresh", name, func(*Scope) (*T, error) { return new(T), nil }, opts)
 }
 
 // define is Define, Value, and Fresh: it checks the name, the constructor,
@@ -156,10 +159,10 @@ func (g *Graph) Replace[T any](n *Node[T], ctor func(*Scope) (T, error)) {
 // begins to construct the node, before the constructor runs: each node a
 // Build reaches, once, in the order it reaches them depth-first, the one
 // whose constructor fails included. The handle is the one [Graph.Define],
-// [Graph.Value], or [Fresh] returned, so fn compares it with a held handle
-// rather than a name. It is for tracing what a Build constructs, such as a
-// test asserting which nodes a run brought up; fn cannot change the Build.
-// Observe panics on a nil fn.
+// [Graph.Value], or [Graph.Fresh] returned, so fn compares it with a held
+// handle rather than a name. It is for tracing what a Build constructs,
+// such as a test asserting which nodes a run brought up; fn cannot change
+// the Build. Observe panics on a nil fn.
 func (g *Graph) Observe(fn func(Ref)) {
 	if fn == nil {
 		panic("graph: Observe with a nil function")
