@@ -1,6 +1,6 @@
 # goal · experiment.graph.spike-graph
 
-- **State:** building
+- **State:** brief ready
 - **Task:** web
 - **Branch:** web
 
